@@ -1,0 +1,414 @@
+/* Стили для страницы уведомлений */
+.notification-tabs .ant-tabs-tab {
+  padding: 12px 20px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  min-width: auto;
+}
+
+/* Переопределение базовых стилей Ant Design для десктопа */
+@media (min-width: 993px) {
+  .notification-tabs .ant-tabs > .ant-tabs-nav .ant-tabs-nav-list .ant-tabs-tab {
+    padding: 16px 32px !important;
+    min-width: 200px !important;
+    width: auto !important;
+    flex: 0 0 auto !important;
+    margin-right: 8px !important;
+  }
+  
+  .notification-tabs .ant-tabs > .ant-tabs-nav .ant-tabs-nav-list {
+    width: auto !important;
+    justify-content: flex-start !important;
+  }
+  
+  .notification-tabs .ant-tabs > .ant-tabs-nav {
+    width: 100% !important;
+  }
+}
+
+.notification-tabs .ant-tabs-tab:hover {
+  color: #1890ff;
+}
+
+.notification-tabs .ant-tabs-tab-active {
+  color: #1890ff !important;
+  font-weight: 600;
+}
+
+.notification-tabs .ant-tabs-ink-bar {
+  background: #1890ff;
+  height: 3px;
+}
+
+.notification-tabs .ant-tabs-content-holder {
+  padding-top: 24px;
+}
+
+.notification-tabs .ant-tabs-nav {
+  margin-bottom: 0;
+}
+
+/* Стили для десктопных экранов (больше 992px) */
+@media (min-width: 993px) {
+  .notification-tabs .ant-tabs-tab {
+    padding: 16px 32px !important;
+    font-size: 16px !important;
+    min-width: 200px !important;
+    width: auto !important;
+    flex: 0 0 auto !important;
+    text-align: left !important;
+    margin: 0 8px 0 0 !important;
+    white-space: nowrap !important;
+  }
+  
+  .notification-tabs .ant-tabs-content-holder {
+    padding-top: 32px !important;
+  }
+  
+  .notification-tabs .ant-tabs-nav-list {
+    justify-content: flex-start !important;
+    width: auto !important;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+  }
+  
+  .notification-tabs .ant-tabs-nav-wrap {
+    justify-content: flex-start !important;
+    width: 100% !important;
+  }
+  
+  .notification-tabs .ant-tabs-nav {
+    width: 100% !important;
+  }
+}
+
+/* Адаптивные стили для планшетов */
+@media (max-width: 992px) {
+  .notification-tabs .ant-tabs-tab {
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+  
+  .notification-tabs .ant-tabs-content-holder {
+    padding-top: 20px;
+  }
+}
+
+/* Адаптивные стили для мобильных */
+@media (max-width: 768px) {
+  .notification-tabs .ant-tabs-tab {
+    padding: 8px 12px !important;
+    font-size: 13px !important;
+    min-width: auto !important;
+    flex: 1;
+    text-align: center;
+    margin: 0 4px;
+  }
+  
+  .notification-tabs .ant-tabs-content-holder {
+    padding-top: 16px !important;
+  }
+
+  .notification-tabs .ant-tabs-nav-wrap {
+    justify-content: center;
+  }
+
+  .notification-tabs .ant-tabs-nav-list {
+    width: 100%;
+    justify-content: space-around;
+  }
+}
+
+/* Очень маленькие экраны */
+@media (max-width: 480px) {
+  .notification-tabs .ant-tabs-tab {
+    padding: 6px 8px !important;
+    font-size: 12px !important;
+  }
+
+  .notification-tabs .ant-tabs-content-holder {
+    padding-top: 12px !important;
+  }
+}
+
+/* Стили для счетчика уведомлений в табе */
+.notification-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  background-color: #ff4d4f;
+  color: #fff;
+  border-radius: 9px;
+  margin-left: 8px;
+  transition: all 0.2s ease;
+}
+
+/* Стили бейджа для десктопа */
+@media (min-width: 993px) {
+  .notification-badge {
+    min-width: 20px;
+    height: 20px;
+    font-size: 12px;
+    margin-left: 10px;
+    padding: 0 8px;
+  }
+}
+
+@media (max-width: 768px) {
+  .notification-badge {
+    min-width: 16px;
+    height: 16px;
+    font-size: 10px;
+    margin-left: 6px;
+  }
+}
+
+@media (max-width: 480px) {
+  .notification-badge {
+    min-width: 14px;
+    height: 14px;
+    font-size: 9px;
+    margin-left: 4px;
+  }
+}
+
+/* Адаптивные стили для заголовка страницы */
+.notifications-header {
+  margin-bottom: 24px;
+}
+
+/* Стили заголовка для десктопа */
+@media (min-width: 993px) {
+  .notifications-header {
+    margin-bottom: 32px;
+  }
+  
+  .notifications-header h2 {
+    font-size: 28px !important;
+    margin-bottom: 8px !important;
+  }
+  
+  .notifications-header .ant-typography {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .notifications-header {
+    margin-bottom: 16px;
+  }
+  
+  .notifications-header h2 {
+    font-size: 20px !important;
+    margin-bottom: 8px !important;
+  }
+  
+  .notifications-header .ant-typography {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .notifications-header {
+    margin-bottom: 12px;
+  }
+  
+  .notifications-header h2 {
+    font-size: 18px !important;
+    margin-bottom: 4px !important;
+  }
+  
+  .notifications-header .ant-typography {
+    font-size: 12px;
+  }
+}
+
+/* Адаптивные стили для контента табов */
+.notification-tab-content {
+  min-height: 400px;
+}
+
+/* Стили контента для десктопа */
+@media (min-width: 993px) {
+  .notification-tab-content {
+    min-height: 500px;
+  }
+}
+
+@media (max-width: 768px) {
+  .notification-tab-content {
+    min-height: 300px;
+  }
+}
+
+@media (max-width: 480px) {
+  .notification-tab-content {
+    min-height: 250px;
+  }
+}
+
+/* Стили для Ant Design компонентов на десктопе */
+@media (min-width: 993px) {
+  .notification-tabs .ant-card {
+    margin: 16px 0;
+  }
+  
+  .notification-tabs .ant-card-body {
+    padding: 24px;
+  }
+  
+  .notification-tabs .ant-list-item {
+    padding: 16px 24px;
+  }
+  
+  .notification-tabs .ant-list-item-meta-title {
+    margin-bottom: 8px;
+    font-size: 16px;
+  }
+  
+  .notification-tabs .ant-list-item-meta-description {
+    font-size: 14px;
+  }
+  
+  .notification-tabs .ant-pagination {
+    text-align: center;
+  }
+  
+  .notification-tabs .ant-pagination-item {
+    min-width: 32px;
+    height: 32px;
+    line-height: 30px;
+  }
+  
+  .notification-tabs .ant-form-item {
+    margin-bottom: 24px;
+  }
+  
+  .notification-tabs .ant-btn {
+    height: 40px;
+    font-size: 14px;
+    padding: 4px 15px;
+  }
+  
+  .notification-tabs .ant-switch {
+    min-width: 44px;
+    height: 22px;
+  }
+  
+  .notification-tabs .ant-switch-handle {
+    width: 18px;
+    height: 18px;
+  }
+  
+  /* Дополнительные стили для исправления табов на десктопе */
+  .notification-tabs.ant-tabs .ant-tabs-nav-list {
+    width: auto !important;
+    justify-content: flex-start !important;
+  }
+  
+  .notification-tabs.ant-tabs .ant-tabs-tab {
+    padding: 16px 32px !important;
+    min-width: 200px !important;
+    width: auto !important;
+    flex: 0 0 auto !important;
+    margin-right: 8px !important;
+    font-size: 16px !important;
+  }
+}
+
+/* Адаптивные стили для Ant Design компонентов на мобильных */
+@media (max-width: 768px) {
+  .notification-tabs .ant-card {
+    margin: 8px 0;
+  }
+  
+  .notification-tabs .ant-card-body {
+    padding: 12px;
+  }
+  
+  .notification-tabs .ant-list-item {
+    padding: 8px 12px;
+  }
+  
+  .notification-tabs .ant-list-item-meta-title {
+    margin-bottom: 4px;
+  }
+  
+  .notification-tabs .ant-list-item-meta-description {
+    font-size: 12px;
+  }
+  
+  .notification-tabs .ant-pagination {
+    text-align: center;
+  }
+  
+  .notification-tabs .ant-pagination-item {
+    min-width: 28px;
+    height: 28px;
+    line-height: 26px;
+  }
+}
+
+@media (max-width: 480px) {
+  .notification-tabs .ant-card-body {
+    padding: 8px;
+  }
+  
+  .notification-tabs .ant-list-item {
+    padding: 6px 8px;
+  }
+  
+  .notification-tabs .ant-form-item {
+    margin-bottom: 12px;
+  }
+  
+  .notification-tabs .ant-btn {
+    height: 32px;
+    font-size: 12px;
+  }
+  
+  .notification-tabs .ant-switch {
+    min-width: 36px;
+    height: 18px;
+  }
+  
+  .notification-tabs .ant-switch-handle {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+/* Финальное переопределение для десктопа с максимальной специфичностью */
+@media (min-width: 993px) {
+  div.notification-tabs.ant-tabs div.ant-tabs-nav div.ant-tabs-nav-wrap div.ant-tabs-nav-list div.ant-tabs-tab {
+    padding: 16px 32px !important;
+    min-width: 200px !important;
+    width: auto !important;
+    flex: 0 0 auto !important;
+    margin: 0 8px 0 0 !important;
+    font-size: 16px !important;
+    white-space: nowrap !important;
+  }
+  
+  div.notification-tabs.ant-tabs div.ant-tabs-nav div.ant-tabs-nav-wrap div.ant-tabs-nav-list {
+    width: auto !important;
+    justify-content: flex-start !important;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+  }
+  
+  div.notification-tabs.ant-tabs div.ant-tabs-nav div.ant-tabs-nav-wrap {
+    width: 100% !important;
+    justify-content: flex-start !important;
+  }
+  
+  div.notification-tabs.ant-tabs div.ant-tabs-nav {
+    width: 100% !important;
+  }
+}

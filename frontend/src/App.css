@@ -1,0 +1,285 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* Основные стили для приложения */
+#root {
+  min-height: 100vh;
+  width: 100%;
+  background-color: #f8fafc;
+}
+
+.App {
+  min-height: 100vh;
+  width: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Кастомные стили для Ant Design */
+.ant-layout-header {
+  background: #fff !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+  border-bottom: 1px solid #f0f0f0 !important;
+  padding: 0 24px !important;
+}
+
+.ant-layout-sider {
+  background: #fff !important;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.06) !important;
+}
+
+.ant-menu-light {
+  background: transparent !important;
+}
+
+.ant-menu-item:hover {
+  background-color: #f0f6ff !important;
+}
+
+.ant-menu-item-selected {
+  background-color: #e0f2fe !important;
+  border-radius: 8px !important;
+  margin: 0 8px !important;
+  width: calc(100% - 16px) !important;
+}
+
+.ant-menu-item-selected::after {
+  display: none !important;
+}
+
+/* Статистические карточки */
+.stats-card {
+  @apply bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow;
+}
+
+.stats-card-value {
+  @apply text-3xl font-bold text-gray-900 mb-2;
+}
+
+.stats-card-label {
+  @apply text-sm font-medium text-gray-500 uppercase tracking-wider;
+}
+
+.stats-card-change {
+  @apply text-sm font-medium;
+}
+
+.stats-card-change.positive {
+  @apply text-green-600;
+}
+
+.stats-card-change.negative {
+  @apply text-red-600;
+}
+
+/* Таблицы */
+.ant-table-thead > tr > th {
+  background-color: #fafafa !important;
+  font-weight: 600 !important;
+  color: #374151 !important;
+}
+
+.ant-table-tbody > tr:hover > td {
+  background-color: #f8fafc !important;
+}
+
+/* Формы */
+.ant-form-item-label > label {
+  font-weight: 500 !important;
+  color: #374151 !important;
+}
+
+/* Кнопки */
+.ant-btn-primary {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+  border: none !important;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.15) !important;
+}
+
+.ant-btn-primary:hover,
+.ant-btn-primary:focus {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.25) !important;
+}
+
+/* Статусы */
+.status-badge {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+
+.status-badge.pending {
+  @apply bg-yellow-100 text-yellow-800;
+}
+
+.status-badge.approved {
+  @apply bg-green-100 text-green-800;
+}
+
+.status-badge.active {
+  @apply bg-green-100 text-green-800;
+}
+
+.status-badge.rejected {
+  @apply bg-red-100 text-red-800;
+}
+
+.status-badge.cancelled {
+  @apply bg-gray-100 text-gray-800;
+}
+
+.status-badge.completed {
+  @apply bg-blue-100 text-blue-800;
+}
+
+/* Загрузчик - теперь используется fixed позиционирование в компоненте */
+
+/* Карточки действий */
+.action-card {
+  @apply bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-all cursor-pointer;
+}
+
+.action-card:hover {
+  @apply border-blue-300 shadow-lg;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .ant-layout-header {
+    padding: 0 16px !important;
+  }
+}
+
+/* Кастомные утилиты */
+.gradient-bg {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.glass-effect {
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+/* Анимации */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Скролл */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* Dashboard-specific styles */
+.dashboard-kpi-card {
+  transition: all 0.3s ease;
+  border-radius: 8px;
+}
+
+.dashboard-kpi-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.dashboard-line-chart .recharts-tooltip-wrapper,
+.dashboard-bar-chart .recharts-tooltip-wrapper,
+.dashboard-pie-chart .recharts-tooltip-wrapper,
+.dashboard-area-chart .recharts-tooltip-wrapper {
+  z-index: 1000;
+}
+
+.dashboard-progress-bar .progress-item {
+  transition: all 0.2s ease;
+}
+
+.dashboard-progress-bar .progress-item:hover {
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  padding: 8px;
+  margin: -4px;
+}
+
+/* Responsive design improvements */
+@media (max-width: 768px) {
+  .dashboard-kpi-card .ant-statistic-title {
+    font-size: 12px;
+  }
+  
+  .dashboard-kpi-card .ant-statistic-content {
+    font-size: 18px;
+  }
+  
+  .recharts-responsive-container {
+    height: 250px !important;
+  }
+}
+
+@media (max-width: 576px) {
+  .dashboard-line-chart .recharts-cartesian-grid,
+  .dashboard-bar-chart .recharts-cartesian-grid,
+  .dashboard-area-chart .recharts-cartesian-grid {
+    stroke-dasharray: none;
+    opacity: 0.3;
+  }
+  
+  .recharts-responsive-container {
+    height: 200px !important;
+  }
+}
+
+/* Loading and empty states */
+.dashboard-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  color: #8c8c8c;
+}
+
+.dashboard-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  color: #bfbfbf;
+  font-size: 14px;
+}
+
+/* Animation for growth indicators */
+.growth-indicator {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

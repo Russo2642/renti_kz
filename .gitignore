@@ -1,0 +1,73 @@
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Тестовые бинарники
+*.test
+
+# Кэш
+*.out
+
+# Папка со сборкой Go
+bin/
+build/
+dist/
+
+# Модульные зависимости (они восстанавливаются через go mod tidy)
+vendor/
+
+node_modules/
+
+# сборки
+build/
+dist/
+
+# кэш
+.cache/
+.npm/
+.yarn/
+.pnp.*
+
+# лог-файлы
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# локальные env
+.env
+.env.*.local
+
+# локальные IDE/редакторы
+.idea/
+.vscode/
+*.swp
+
+# ОС
+.DS_Store
+Thumbs.db
+
+# === Общие ===
+# покрытие тестов
+coverage/
+*.lcov
+
+# lock-файлы (если используешь один менеджер, оставь только свой)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+
+
+scripts/
+
+internal/config/firebase-credentials.json
+
+
+init-*.sh
+
+docker-compose.yml
+
+.env.example

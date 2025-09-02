@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Публичная оферта на заключение договора аренды квартиры</title>
+    <style>
+        body {
+            font-family: 'Times New Roman', serif;
+            font-size: 14px;
+            line-height: 1.6;
+            margin: 40px;
+            color: #000;
+            background-color: #fff;
+        }
+        .header {
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+        }
+        .contract-info {
+            text-align: right;
+            font-size: 12px;
+            margin-bottom: 20px;
+            color: #666;
+        }
+        .section {
+            margin-bottom: 25px;
+        }
+        .section-title {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .subsection {
+            margin-bottom: 15px;
+        }
+        .bold {
+            font-weight: bold;
+        }
+        .terms-list {
+            padding-left: 25px;
+            margin: 10px 0;
+        }
+        .terms-list li {
+            margin-bottom: 8px;
+        }
+        .highlight {
+            background-color: #fffacd;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        .owner-info {
+            margin-top: 40px;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .contract-dates {
+            font-size: 16px;
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #e8f4fd;
+            border-radius: 5px;
+        }
+        .price-info {
+            background-color: #f0f8f0;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .footer-note {
+            margin-top: 30px;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="contract-info">
+        Договор № {{.BookingNumber}}<br>
+        Дата создания: {{.ContractDate}}
+    </div>
+
+    <div class="header">
+        Публичная оферта<br>
+        на заключение договора аренды квартиры (апартаментов)<br>
+        на краткосрочный и долгосрочный срок<br>
+        (посуточно, по дням, помесячно, по часам)
+    </div>
+
+    <div class="section">
+        <p><span class="bold">{{.OwnerName}}</span>, именуемый в дальнейшем «Арендодатель», публикует настоящую оферту о заключении договора аренды квартиры (апартаментов) на условиях, изложенных ниже.</p>
+    </div>
+
+    <div class="contract-dates">
+        <strong>Период аренды:</strong> с {{.StartDate | formatDate}} по {{.EndDate | formatDate}}<br>
+        <strong>Продолжительность:</strong> {{.Duration}} час(ов)
+    </div>
+
+    <div class="section">
+        <div class="section-title">1. Общие положения</div>
+        <div class="subsection">
+            <p><span class="bold">1.1.</span> Настоящий документ является публичной офертой в соответствии со статьей 395 Гражданского кодекса Республики Казахстан.</p>
+        </div>
+        <div class="subsection">
+            <p><span class="bold">1.2.</span> Заключением договора аренды признается акцепт настоящей оферты Заказчиком. Акцептом считается осуществление бронирования и/или внесение оплаты любым из указанных способов.</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">2. Предмет договора</div>
+        <div class="subsection">
+            <p><span class="bold">2.1.</span> Арендодатель предоставляет Заказчику квартиру (апартаменты) в краткосрочную аренду для временного проживания без предоставления регистрации.</p>
+        </div>
+        <div class="subsection">
+            <p><span class="bold">2.2.</span> Адрес квартиры: <span class="highlight">{{.ApartmentAddress}}</span>.</p>
+        </div>
+        <div class="subsection">
+            <p><span class="bold">2.3.</span> Квартира оборудована: мебелью, бытовой техникой, интернетом, постельными принадлежностями. Подробное описание размещено на сайте: <span class="bold">Renti.kz</span>.</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">3. Порядок бронирования и заключения договора</div>
+        <div class="subsection">
+            <p><span class="bold">3.1.</span> Заказчик осуществляет бронирование через сайт или приложение <span class="bold">Renti.kz</span>.</p>
+        </div>
+        <div class="subsection">
+            <p><span class="bold">3.2.</span> Для бронирования необходимо предоставить:</p>
+            <ul class="terms-list">
+                <li>ФИО</li>
+                <li>ИИН</li>
+                <li>номер удостоверения личности или паспорта</li>
+                <li>контактный номер телефона</li>
+                <li>Биометрию</li>
+            </ul>
+        </div>
+        <div class="subsection">
+            <p><span class="bold">3.3.</span> Бронирование подтверждается после внесения предоплаты в размере 50% от стоимости проживания или после депозита в размере 10 000 (десять тысяч) тенге.</p>
+        </div>
+        <div class="subsection">
+            <p><span class="bold">3.4.</span> С момента регистрации на сайте или приложении <span class="bold">RENTI.KZ</span>, считается согласием оферты и заключением действующего договора о принятии условий. Волеизъявления договора — это выражение согласованной воли двух и более лиц, направленное на единый правовой результат статья 147 ГК РК.</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">4. Стоимость услуг и порядок расчетов</div>
+        
+        <div class="price-info">
+            <div class="subsection">
+                <p><span class="bold">4.1.</span> Стоимость аренды составляет: <span class="highlight bold">{{.TotalPrice}} тенге</span></p>
+                <p><span class="bold">Сервисный сбор:</span> {{.ServiceFee}} тенге</p>
+                <p><span class="bold">Общая сумма к оплате:</span> <span class="highlight bold">{{.FinalPrice}} тенге</span></p>
+            </div>
+        </div>
+        
+        <div class="subsection">
+            <p><span class="bold">4.2.</span> Оплата производится наличными, через банковский перевод, Kaspi или иным удобным способом.</p>
+        </div>
+        <div class="subsection">
+            <p><span class="bold">4.3.</span> Арендодатель или Renti.kz выдает чек ККМ при необходимости.</p>
+        </div>
+        <div class="subsection">
+            <p><span class="bold">4.4.</span> При аннуляции бронирования за 24 часа до заезда предоплата возвращается полностью. В ином случае — возврат невозможен.</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">5. Права и обязанности сторон</div>
+        
+        <div class="subsection">
+            <p><span class="bold">Арендодатель обязуется:</span></p>
+            <ul class="terms-list">
+                <li>Предоставить жилье в пригодном для проживания состоянии</li>
+                <li>Устранять неисправности в разумные сроки</li>
+            </ul>
+        </div>
+        
+        <div class="subsection">
+            <p><span class="bold">Заказчик обязуется:</span></p>
+            <ul class="terms-list">
+                <li>Соблюдать порядок, не нарушать общественный покой</li>
+                <li>Не курить в квартире, не размещать животных без согласования</li>
+                <li>Возместить убытки при порче имущества</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">6. Ответственность сторон</div>
+        <div class="subsection">
+            <p><span class="bold">6.1.</span> Заказчик несет ответственность за ущерб, причиненный имуществу, в полном объеме.</p>
+        </div>
+        <div class="subsection">
+            <p><span class="bold">6.2.</span> Арендодатель не несет ответственности за вещи, оставленные Заказчиком.</p>
+        </div>
+        <div class="subsection">
+            <p><span class="bold">6.3.</span> В случае невозможности предоставления жилья по вине Арендодателя, оплаченная сумма возвращается полностью.</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">7. Форс-мажор</div>
+        <div class="subsection">
+            <p><span class="bold">7.1.</span> Стороны освобождаются от ответственности при наступлении обстоятельств непреодолимой силы: стихийные бедствия, отключение коммунальных услуг, акты государственных органов и пр.</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">8. Разрешение споров</div>
+        <div class="subsection">
+            <p><span class="bold">8.1.</span> Споры разрешаются путем переговоров, при невозможности — в судебном порядке по месту нахождения Арендодателя, в соответствии с законодательством РК.</p>
+        </div>
+        <div class="subsection">
+            <p><span class="bold">8.2.</span> Срок рассмотрения претензии — 5 (пять) рабочих дней.</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">9. Заключительные положения</div>
+        <div class="subsection">
+            <p><span class="bold">9.1.</span> Настоящая оферта действует бессрочно и может быть отозвана или изменена Арендодателем в любое время путем публикации новой редакции на сайте или приложении.</p>
+        </div>
+        <div class="subsection">
+            <p><span class="bold">9.2.</span> Актуальная версия оферты доступна на сайте или приложении <span class="bold">Renti.kz</span>.</p>
+        </div>
+        <div class="subsection">
+            <p><span class="bold">9.3.</span> Факт оплаты и/или заселения подтверждает согласие Заказчика с условиями настоящей оферты.</p>
+        </div>
+    </div>
+
+    <div class="section owner-info">
+        <div class="section-title">10. Реквизиты Арендодателя</div>
+        <p><span class="bold">ФИО:</span> {{.OwnerName}}</p>
+        <p><span class="bold">ИИН:</span> {{.OwnerIIN}}</p>
+        <p><span class="bold">Телефон:</span> {{.OwnerPhone}}</p>
+        <p><span class="bold">Email:</span> {{.OwnerEmail}}</p>
+    </div>
+
+    <div class="footer-note">
+        Договор сгенерирован автоматически через платформу Renti.kz<br>
+        Версия шаблона: {{.TemplateVersion}} | Дата создания: {{.ContractDate}}
+    </div>
+</body>
+</html> 
