@@ -221,6 +221,24 @@ func (uc *notificationUseCase) NotifyBookingEnding(userID int, bookingID int, ap
 	return uc.CreateNotification(notification)
 }
 
+func (uc *notificationUseCase) NotifyLockIssue(userID int, bookingID int, apartmentTitle string, issue string) error {
+	notification := &domain.Notification{
+		UserID:    userID,
+		Type:      domain.NotificationLockIssue,
+		Title:     "⚠️ Проблема с замком",
+		Message:   fmt.Sprintf("Обнаружена проблема с замком в квартире '%s': %s", apartmentTitle, issue),
+		Priority:  domain.NotificationPriorityUrgent,
+		IsRead:    false,
+		CreatedAt: time.Now(),
+		Data: map[string]interface{}{
+			"booking_id": bookingID,
+			"issue":      issue,
+		},
+	}
+
+	return uc.CreateNotification(notification)
+}
+
 func (uc *notificationUseCase) NotifyPaymentRequired(userID int, bookingID int, apartmentTitle string, amount float64) error {
 	notification := &domain.Notification{
 		UserID:    userID,

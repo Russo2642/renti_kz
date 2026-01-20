@@ -387,16 +387,15 @@ const OwnerBookingsPage = () => {
     },
   ];
 
-  // Подсчет статистики
   const bookings = bookingsData?.data?.bookings || [];
   const stats = bookings.length > 0 ? {
     total: bookings.length,
-    confirmed: bookings.filter(b => b.status === 'confirmed').length,
+    pending: bookings.filter(b => b.status === 'pending').length,
     approved: bookings.filter(b => b.status === 'approved').length,
-    in_progress: bookings.filter(b => b.status === 'in_progress').length,
-    finished: bookings.filter(b => b.status === 'finished').length,
+    active: bookings.filter(b => b.status === 'active').length,
+    completed: bookings.filter(b => b.status === 'completed').length,
     totalRevenue: bookings
-      .filter(b => ['approved', 'finished', 'in_progress'].includes(b.status))
+      .filter(b => ['approved', 'completed', 'active'].includes(b.status))
       .reduce((sum, b) => sum + (b.final_price || 0), 0)
   } : {};
 
@@ -425,7 +424,7 @@ const OwnerBookingsPage = () => {
           <Card>
             <Statistic
               title="Ожидают одобрения"
-              value={stats.confirmed || 0}
+              value={stats.pending || 0}
               prefix={<Badge status="warning" />}
               valueStyle={{ color: '#faad14', fontSize: isMobile ? '18px' : '24px' }}
             />
@@ -445,7 +444,7 @@ const OwnerBookingsPage = () => {
           <Card>
             <Statistic
               title="Активные"
-              value={stats.in_progress || 0}
+              value={stats.active || 0}
               prefix={<ClockCircleOutlined />}
               valueStyle={{ color: '#13c2c2', fontSize: isMobile ? '18px' : '24px' }}
             />
@@ -455,7 +454,7 @@ const OwnerBookingsPage = () => {
           <Card>
             <Statistic
               title="Завершено"
-              value={stats.finished || 0}
+              value={stats.completed || 0}
               prefix={<CheckOutlined />}
               valueStyle={{ color: '#52c41a', fontSize: isMobile ? '18px' : '24px' }}
             />
@@ -476,9 +475,9 @@ const OwnerBookingsPage = () => {
       </Row>
 
       {/* Уведомления о действиях */}
-      {stats.confirmed > 0 && (
+      {stats.pending > 0 && (
         <Alert
-          message={`У вас ${stats.confirmed} бронирований ожидают одобрения`}
+          message={`У вас ${stats.pending} бронирований ожидают одобрения`}
           type="warning"
           showIcon
           className="mb-6"
@@ -502,12 +501,12 @@ const OwnerBookingsPage = () => {
               onChange={(value) => setFilters({ ...filters, status: value })}
             >
               <Option value="created">Создано</Option>
-              <Option value="confirmed">Подтверждено</Option>
+              <Option value="pending">На рассмотрении</Option>
               <Option value="approved">Одобрено</Option>
               <Option value="rejected">Отклонено</Option>
-              <Option value="cancelled">Отменено</Option>
-              <Option value="finished">Завершено</Option>
-              <Option value="in_progress">В процессе</Option>
+              <Option value="canceled">Отменено</Option>
+              <Option value="completed">Завершено</Option>
+              <Option value="active">Активно</Option>
             </Select>
           </div>
           <div className="flex-1 min-w-[200px]">
@@ -526,16 +525,16 @@ const OwnerBookingsPage = () => {
             <RangePicker
               style={{ width: '100%' }}
               onChange={(dates) => {
-                if (dates) {
+                if (dates && dates.length === 2 && dates[0] && dates[1]) {
                   setFilters({
                     ...filters,
-                    start_date: dates[0].format('YYYY-MM-DD'),
-                    end_date: dates[1].format('YYYY-MM-DD')
+                    date_from: dates[0].format('YYYY-MM-DD'),
+                    date_to: dates[1].format('YYYY-MM-DD')
                   });
                 } else {
                   const newFilters = { ...filters };
-                  delete newFilters.start_date;
-                  delete newFilters.end_date;
+                  delete newFilters.date_from;
+                  delete newFilters.date_to;
                   setFilters(newFilters);
                 }
               }}
@@ -565,7 +564,7 @@ const OwnerBookingsPage = () => {
             showSizeChanger: !isMobile,
             showQuickJumper: !isMobile,
             showTotal: (total, range) => 
-              `${range[0]}-${range[1]} из ${total} бронирований`,
+              range ? `${range[0]}-${range[1]} из ${total} бронирований` : `${total} бронирований`,
             responsive: true,
             simple: isMobile,
             onChange: (page, size) => {
@@ -724,7 +723,7 @@ const OwnerBookingsPage = () => {
                   {dayjs(selectedBooking.end_date).format('HH:mm')}
                 </div>
               </Descriptions.Item>
-              <Descriptions.Item label="Длительность">
+              <Descriptions.Item label="Длительность" span={isMobile ? 1 : 2}>
                 {calculateDuration(selectedBooking.start_date, selectedBooking.end_date)}
               </Descriptions.Item>
               <Descriptions.Item label="Базовая стоимость">
@@ -872,13 +871,13 @@ const OwnerBookingsPage = () => {
             </div>
 
             {/* Быстрые действия */}
-            {(selectedBooking.status === 'confirmed' || 
+            {(selectedBooking.status === 'pending' || 
               selectedBooking.status === 'approved' || 
-              selectedBooking.status === 'in_progress') && (
+              selectedBooking.status === 'active') && (
               <div className="mt-6">
                 <Title level={4}>Действия</Title>
                 <Space direction={isMobile ? 'vertical' : 'horizontal'} className={isMobile ? 'w-full' : ''}>
-                  {selectedBooking.status === 'confirmed' && (
+                  {selectedBooking.status === 'pending' && (
                     <>
                       <Button
                         type="primary"
@@ -904,7 +903,7 @@ const OwnerBookingsPage = () => {
                       </Button>
                     </>
                   )}
-                  {(selectedBooking.status === 'approved' || selectedBooking.status === 'in_progress') && (
+                  {(selectedBooking.status === 'approved' || selectedBooking.status === 'active') && (
                     <Button
                       danger
                       icon={<CloseOutlined />}
@@ -914,7 +913,7 @@ const OwnerBookingsPage = () => {
                       Отменить
                     </Button>
                   )}
-                  {selectedBooking.status === 'in_progress' && (
+                  {selectedBooking.status === 'active' && (
                     <Button
                       type="primary"
                       icon={<CheckOutlined />}

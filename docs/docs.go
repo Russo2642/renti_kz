@@ -532,7 +532,7 @@ const docTemplate = `{
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "Полное удаление квартиры из системы (только для админов)",
+                "description": "Удаление квартиры из системы. Если есть активные бронирования и force=false, возвращает 409 с информацией о бронированиях. С force=true отменяет все бронирования и удаляет квартиру.",
                 "consumes": [
                     "application/json"
                 ],
@@ -550,6 +550,12 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Принудительное удаление с отменой всех бронирований",
+                        "name": "force",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -579,6 +585,12 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Есть активные бронирования",
                         "schema": {
                             "$ref": "#/definitions/domain.ErrorResponse"
                         }
@@ -1834,6 +1846,76 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/cleaners/{id}/schedule": {
+            "patch": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Обновляет только переданные дни недели в расписании уборщицы (только для админов)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin - Cleaners"
+                ],
+                "summary": "Частичное обновление расписания уборщицы (админ)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID уборщицы",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Данные расписания (только нужные дни). Используйте null для игнорирования дня, [] для очистки дня",
+                        "name": "schedule",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.CleanerSchedulePatch"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/domain.ErrorResponse"
                         }
@@ -3794,6 +3876,82 @@ const docTemplate = `{
                         "description": "Размер страницы",
                         "name": "page_size",
                         "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/domain.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/users/{id}/password": {
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Устанавливает новый пароль пользователю. Доступно только для админов.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Установка пароля владельцу недвижимости (админ)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID пользователя",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Новый пароль",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/http.AdminSetPasswordRequest"
+                        }
                     }
                 ],
                 "responses": {
@@ -8059,7 +8217,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Cleaner"
+                    "cleaner"
                 ],
                 "summary": "Получить мои квартиры",
                 "responses": {
@@ -8120,7 +8278,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Cleaner"
+                    "cleaner"
                 ],
                 "summary": "Получить квартиры для уборки",
                 "responses": {
@@ -8181,7 +8339,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Cleaner"
+                    "cleaner"
                 ],
                 "summary": "Завершить уборку",
                 "parameters": [
@@ -8244,7 +8402,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Cleaner"
+                    "cleaner"
                 ],
                 "summary": "Получить профиль уборщицы",
                 "responses": {
@@ -8302,7 +8460,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Cleaner"
+                    "cleaner"
                 ],
                 "summary": "Полное обновление расписания",
                 "parameters": [
@@ -8428,7 +8586,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Cleaner"
+                    "cleaner"
                 ],
                 "summary": "Начать уборку",
                 "parameters": [
@@ -8491,7 +8649,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Cleaner"
+                    "cleaner"
                 ],
                 "summary": "Получить статистику уборщицы",
                 "responses": {
@@ -14721,6 +14879,18 @@ const docTemplate = `{
             "properties": {
                 "apartment_id": {
                     "type": "integer"
+                }
+            }
+        },
+        "http.AdminSetPasswordRequest": {
+            "type": "object",
+            "required": [
+                "password"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string",
+                    "minLength": 6
                 }
             }
         },

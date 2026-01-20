@@ -281,6 +281,49 @@ func (uc *UserUseCase) UpdateUserStatus(userID int, isActive bool, reason string
 	return nil
 }
 
+func (uc *UserUseCase) AdminSetPassword(userID int, newPassword string, adminID int) error {
+	admin, err := uc.userRepo.GetByID(adminID)
+	if err != nil {
+		return fmt.Errorf("failed to get admin: %w", err)
+	}
+	if admin == nil {
+		return fmt.Errorf("admin with id %d not found", adminID)
+	}
+	if admin.Role != domain.RoleAdmin {
+		return fmt.Errorf("only admins can set user passwords")
+	}
+
+	user, err := uc.userRepo.GetByID(userID)
+	if err != nil {
+		return fmt.Errorf("failed to get user: %w", err)
+	}
+	if user == nil {
+		return fmt.Errorf("user with id %d not found", userID)
+	}
+
+	if user.Role == domain.RoleUser {
+		return fmt.Errorf("password cannot be set for regular users")
+	}
+
+	if len(newPassword) < 6 {
+		return fmt.Errorf("password must be at least 6 characters")
+	}
+
+	hashedPassword, err := uc.hashPassword(newPassword)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	user.PasswordHash = hashedPassword
+	user.UpdatedAt = time.Now()
+
+	if err := uc.userRepo.Update(user); err != nil {
+		return fmt.Errorf("failed to update user password: %w", err)
+	}
+
+	return nil
+}
+
 func (uc *UserUseCase) hashPassword(password string) (string, error) {
 	saltedPassword := password + uc.passwordSalt
 

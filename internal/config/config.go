@@ -24,7 +24,6 @@ type Config struct {
 	App          AppConfig
 	Migration    MigrationConfig
 	Tuya         TuyaConfig
-	Firebase     FirebaseConfig
 	Redis        RedisConfig
 	Notification NotificationConfig
 	OTP          OTPConfig
@@ -99,17 +98,12 @@ type MigrationConfig struct {
 	MigrationsPath string
 }
 
-type FirebaseConfig struct {
-	CredentialsFile string
-	ProjectID       string
-}
-
 type RedisConfig struct {
 	Host     string
 	Port     string
 	Password string
 	DB       int
-	// Новые настройки для оптимизации производительности
+
 	PoolSize     int
 	MinIdleConns int
 	MaxRetries   int
@@ -200,10 +194,6 @@ func Load() (*Config, error) {
 			ClientSecret: getEnv("TUYA_CLIENT_SECRET", ""),
 			APIBase:      getEnv("TUYA_API_BASE", "https://openapi.tuyaeu.com"),
 			TimeZone:     getEnv("TUYA_TIMEZONE", "+05:00"),
-		},
-		Firebase: FirebaseConfig{
-			CredentialsFile: getEnv("FIREBASE_CREDENTIALS_FILE", "internal/config/firebase-credentials.json"),
-			ProjectID:       getEnv("FIREBASE_PROJECT_ID", "renti-kz"),
 		},
 		Redis: RedisConfig{
 			Host:         getEnv("REDIS_HOST", "localhost"),

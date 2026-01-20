@@ -116,11 +116,11 @@ func (r *bookingRepository) GetByRenterID(renterID int, status []domain.BookingS
 
 	dateFilter := ""
 	if dateFrom != nil {
-		dateFilter += fmt.Sprintf(" AND b.created_at >= $%d", len(args)+1)
+		dateFilter += fmt.Sprintf(" AND b.end_date >= $%d", len(args)+1)
 		args = append(args, *dateFrom)
 	}
 	if dateTo != nil {
-		dateFilter += fmt.Sprintf(" AND b.created_at <= $%d", len(args)+1)
+		dateFilter += fmt.Sprintf(" AND b.start_date <= $%d", len(args)+1)
 		args = append(args, *dateTo)
 	}
 
@@ -184,11 +184,11 @@ func (r *bookingRepository) GetByOwnerID(ownerID int, status []domain.BookingSta
 
 	dateFilter := ""
 	if dateFrom != nil {
-		dateFilter += fmt.Sprintf(" AND b.created_at >= $%d", len(args)+1)
+		dateFilter += fmt.Sprintf(" AND b.end_date >= $%d", len(args)+1)
 		args = append(args, *dateFrom)
 	}
 	if dateTo != nil {
-		dateFilter += fmt.Sprintf(" AND b.created_at <= $%d", len(args)+1)
+		dateFilter += fmt.Sprintf(" AND b.start_date <= $%d", len(args)+1)
 		args = append(args, *dateTo)
 	}
 
@@ -546,12 +546,31 @@ func (r *bookingRepository) GetAll(filters map[string]interface{}, page, pageSiz
 		argCount++
 	}
 
+	if renterUserID, ok := filters["renter_user_id"].(int); ok && renterUserID > 0 {
+		if whereClause != "" {
+			whereClause += " AND "
+		}
+		whereClause += fmt.Sprintf("b.renter_id IN (SELECT id FROM renters WHERE user_id = $%d)", argCount+1)
+		args = append(args, renterUserID)
+		argCount++
+	}
+
+	if ownerUserID, ok := filters["owner_user_id"].(int); ok && ownerUserID > 0 {
+		if whereClause != "" {
+			whereClause += " AND "
+		}
+		whereClause += fmt.Sprintf("b.apartment_id IN (SELECT a.id FROM apartments a JOIN property_owners po ON a.owner_id = po.id WHERE po.user_id = $%d)", argCount+1)
+		args = append(args, ownerUserID)
+		argCount++
+	}
+
 	if dateFromStr, ok := filters["date_from"].(string); ok && dateFromStr != "" {
-		if dateFrom, err := time.Parse("2006-01-02", dateFromStr); err == nil {
+		if parsed, err := time.Parse("2006-01-02", dateFromStr); err == nil {
+			dateFrom := time.Date(parsed.Year(), parsed.Month(), parsed.Day(), 0, 0, 0, 0, parsed.Location())
 			if whereClause != "" {
 				whereClause += " AND "
 			}
-			whereClause += fmt.Sprintf("b.created_at >= $%d", argCount+1)
+			whereClause += fmt.Sprintf("b.end_date >= $%d", argCount+1)
 			args = append(args, dateFrom)
 			argCount++
 		}
@@ -561,17 +580,18 @@ func (r *bookingRepository) GetAll(filters map[string]interface{}, page, pageSiz
 		if whereClause != "" {
 			whereClause += " AND "
 		}
-		whereClause += fmt.Sprintf("b.created_at >= $%d", argCount+1)
+		whereClause += fmt.Sprintf("b.end_date >= $%d", argCount+1)
 		args = append(args, dateFrom)
 		argCount++
 	}
 
 	if dateToStr, ok := filters["date_to"].(string); ok && dateToStr != "" {
-		if dateTo, err := time.Parse("2006-01-02", dateToStr); err == nil {
+		if parsed, err := time.Parse("2006-01-02", dateToStr); err == nil {
+			dateTo := time.Date(parsed.Year(), parsed.Month(), parsed.Day(), 23, 59, 59, 999999999, parsed.Location())
 			if whereClause != "" {
 				whereClause += " AND "
 			}
-			whereClause += fmt.Sprintf("b.created_at <= $%d", argCount+1)
+			whereClause += fmt.Sprintf("b.start_date <= $%d", argCount+1)
 			args = append(args, dateTo)
 			argCount++
 		}
@@ -581,7 +601,7 @@ func (r *bookingRepository) GetAll(filters map[string]interface{}, page, pageSiz
 		if whereClause != "" {
 			whereClause += " AND "
 		}
-		whereClause += fmt.Sprintf("b.created_at <= $%d", argCount+1)
+		whereClause += fmt.Sprintf("b.start_date <= $%d", argCount+1)
 		args = append(args, dateTo)
 		argCount++
 	}

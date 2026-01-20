@@ -297,7 +297,7 @@ const NotificationCenter = ({ maxItems = 5, showAllLink = true, placement = "bot
 
   return (
     <Dropdown
-      overlay={dropdownContent}
+      dropdownRender={() => dropdownContent}
       trigger={['click']}
       placement={isMobile ? "bottomRight" : placement}
       open={isOpen}

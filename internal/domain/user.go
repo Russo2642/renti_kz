@@ -129,6 +129,7 @@ type UserUseCase interface {
 	GetAllUsers(filters map[string]interface{}, page, pageSize int) ([]*User, int, error)
 	UpdateUserRole(userID int, role UserRole, adminID int) error
 	UpdateUserStatus(userID int, isActive bool, reason string, adminID int) error
+	AdminSetPassword(userID int, newPassword string, adminID int) error
 	GetRoleStatistics() (map[string]int, error)
 	GetStatusStatistics() (map[string]int, error)
 }

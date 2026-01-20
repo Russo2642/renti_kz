@@ -2781,17 +2781,19 @@ func (h *ApartmentHandler) AdminGetApartmentByID(c *gin.Context) {
 }
 
 // @Summary Удаление квартиры (админ)
-// @Description Полное удаление квартиры из системы (только для админов)
+// @Description Удаление квартиры из системы. Если есть активные бронирования и force=false, возвращает 409 с информацией о бронированиях. С force=true отменяет все бронирования и удаляет квартиру.
 // @Tags admin
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
 // @Param id path int true "ID квартиры"
+// @Param force query bool false "Принудительное удаление с отменой всех бронирований"
 // @Success 200 {object} domain.SuccessResponse
 // @Failure 400 {object} domain.ErrorResponse
 // @Failure 401 {object} domain.ErrorResponse
 // @Failure 403 {object} domain.ErrorResponse
 // @Failure 404 {object} domain.ErrorResponse
+// @Failure 409 {object} domain.ErrorResponse "Есть активные бронирования"
 // @Failure 500 {object} domain.ErrorResponse
 // @Router /admin/apartments/{id} [delete]
 func (h *ApartmentHandler) AdminDeleteApartment(c *gin.Context) {
@@ -2800,17 +2802,57 @@ func (h *ApartmentHandler) AdminDeleteApartment(c *gin.Context) {
 		return
 	}
 
+	adminID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, domain.NewErrorResponse("пользователь не авторизован"))
+		return
+	}
+	adminIDInt := adminID.(int)
+
+	forceParam := c.Query("force")
+	force := forceParam == "true" || forceParam == "1"
+
+	logger.Info("AdminDeleteApartment: запрос на удаление квартиры",
+		slog.Int("apartment_id", apartmentID),
+		slog.Int("admin_id", adminIDInt),
+		slog.Bool("force", force))
+
 	apartment, err := h.apartmentUseCase.GetByID(apartmentID)
 	if err != nil {
+		logger.Error("AdminDeleteApartment: ошибка получения квартиры",
+			slog.Int("apartment_id", apartmentID),
+			slog.String("error", err.Error()))
 		c.JSON(http.StatusNotFound, domain.NewErrorResponse("квартира не найдена"))
 		return
 	}
 
-	err = h.apartmentUseCase.Delete(apartmentID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, domain.NewErrorResponse("ошибка при удалении квартиры"))
+	if apartment == nil {
+		c.JSON(http.StatusNotFound, domain.NewErrorResponse("квартира не найдена"))
 		return
 	}
+
+	hasActiveBookings, activeCount, err := h.apartmentUseCase.DeleteByAdmin(apartmentID, force, adminIDInt)
+	if err != nil {
+		logger.Error("AdminDeleteApartment: ошибка удаления квартиры",
+			slog.Int("apartment_id", apartmentID),
+			slog.String("error", err.Error()))
+		c.JSON(http.StatusInternalServerError, domain.NewErrorResponse("ошибка при удалении квартиры: "+err.Error()))
+		return
+	}
+
+	if hasActiveBookings {
+		logger.Info("AdminDeleteApartment: удаление заблокировано из-за активных бронирований",
+			slog.Int("apartment_id", apartmentID),
+			slog.Int("active_bookings", activeCount))
+		c.JSON(http.StatusConflict, domain.NewErrorResponse(fmt.Sprintf(
+			"невозможно удалить квартиру: есть %d активных бронирований. Используйте параметр force=true для принудительного удаления с отменой всех бронирований",
+			activeCount,
+		)))
+		return
+	}
+
+	logger.Info("AdminDeleteApartment: квартира успешно удалена",
+		slog.Int("apartment_id", apartmentID))
 
 	go func() {
 		var userID int
@@ -3541,49 +3583,44 @@ func (h *ApartmentHandler) GetOwnerStatistics(c *gin.Context) {
 		return
 	}
 
-	// Парсинг дат для периода анализа
 	var dateFrom, dateTo time.Time
 	if dateFromStr := c.Query("date_from"); dateFromStr != "" {
-		dateFrom, err = time.Parse("2006-01-02", dateFromStr)
+		parsed, err := time.Parse("2006-01-02", dateFromStr)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, domain.NewErrorResponse("неверный формат date_from (используйте YYYY-MM-DD)"))
 			return
 		}
+		dateFrom = time.Date(parsed.Year(), parsed.Month(), parsed.Day(), 0, 0, 0, 0, parsed.Location())
 	} else {
-		dateFrom = time.Now().AddDate(0, -1, 0) // 30 дней назад
+		dateFrom = time.Now().AddDate(0, -1, 0)
 	}
 
 	if dateToStr := c.Query("date_to"); dateToStr != "" {
-		dateTo, err = time.Parse("2006-01-02", dateToStr)
+		parsed, err := time.Parse("2006-01-02", dateToStr)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, domain.NewErrorResponse("неверный формат date_to (используйте YYYY-MM-DD)"))
 			return
 		}
+		dateTo = time.Date(parsed.Year(), parsed.Month(), parsed.Day(), 23, 59, 59, 999999999, parsed.Location())
 	} else {
 		dateTo = time.Now()
 	}
 
-	// Получение квартир владельца
 	apartments, err := h.apartmentUseCase.GetByOwnerID(owner.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, domain.NewErrorResponse("ошибка при получении квартир: "+err.Error()))
 		return
 	}
-
-	// Статистика квартир
 	apartmentStats := h.calculateOwnerApartmentStatistics(apartments)
 
-	// Статистика бронирований
 	bookingStats, err := h.calculateOwnerBookingStatistics(apartments, dateFrom, dateTo)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, domain.NewErrorResponse("ошибка при расчете статистики бронирований: "+err.Error()))
 		return
 	}
 
-	// Финансовая статистика
 	financialStats := h.calculateOwnerFinancialStatistics(bookingStats["bookings"].([]*domain.Booking))
 
-	// Статистика эффективности квартир
 	efficiencyStats := h.calculateApartmentEfficiencyStatistics(apartments, bookingStats["bookings"].([]*domain.Booking))
 
 	response := gin.H{
@@ -4118,8 +4155,22 @@ func (h *ApartmentHandler) calculateOwnerFinancialStatistics(bookings []*domain.
 	monthlyRevenue := make(map[string]int)
 	durationRevenue := make(map[string]int)
 
+	revenueStatuses := []domain.BookingStatus{
+		domain.BookingStatusApproved,
+		domain.BookingStatusActive,
+		domain.BookingStatusCompleted,
+	}
+
 	for _, booking := range bookings {
-		if booking.Status == domain.BookingStatusCompleted {
+		isRevenueBooking := false
+		for _, status := range revenueStatuses {
+			if booking.Status == status {
+				isRevenueBooking = true
+				break
+			}
+		}
+
+		if isRevenueBooking {
 			totalRevenue += booking.FinalPrice
 
 			month := booking.CreatedAt.Format("2006-01")
@@ -4140,15 +4191,18 @@ func (h *ApartmentHandler) calculateOwnerFinancialStatistics(bookings []*domain.
 	}
 
 	avgBookingValue := 0.0
-	completedBookings := 0
+	revenueBookingsCount := 0
 	for _, booking := range bookings {
-		if booking.Status == domain.BookingStatusCompleted {
-			completedBookings++
+		for _, status := range revenueStatuses {
+			if booking.Status == status {
+				revenueBookingsCount++
+				break
+			}
 		}
 	}
 
-	if completedBookings > 0 {
-		avgBookingValue = float64(totalRevenue) / float64(completedBookings)
+	if revenueBookingsCount > 0 {
+		avgBookingValue = float64(totalRevenue) / float64(revenueBookingsCount)
 	}
 
 	return gin.H{
@@ -4156,7 +4210,7 @@ func (h *ApartmentHandler) calculateOwnerFinancialStatistics(bookings []*domain.
 		"avg_booking_value":   avgBookingValue,
 		"revenue_by_month":    monthlyRevenue,
 		"revenue_by_duration": durationRevenue,
-		"completed_bookings":  completedBookings,
+		"revenue_bookings":    revenueBookingsCount,
 	}
 }
 
@@ -4189,27 +4243,37 @@ func (h *ApartmentHandler) calculateApartmentEfficiencyStatistics(apartments []*
 
 	var performances []apartmentPerformance
 
+	revenueStatuses := map[domain.BookingStatus]bool{
+		domain.BookingStatusApproved:  true,
+		domain.BookingStatusActive:    true,
+		domain.BookingStatusCompleted: true,
+	}
+
 	for _, apt := range apartments {
 		bookingList := apartmentBookings[apt.ID]
 		totalBookings := len(bookingList)
 		completedBookings := 0
+		revenueBookings := 0
 		totalRevenue := 0
 
 		for _, booking := range bookingList {
 			if booking.Status == domain.BookingStatusCompleted {
 				completedBookings++
+			}
+			if revenueStatuses[booking.Status] {
+				revenueBookings++
 				totalRevenue += booking.FinalPrice
 			}
 		}
 
 		avgRevenue := 0.0
-		if completedBookings > 0 {
-			avgRevenue = float64(totalRevenue) / float64(completedBookings)
+		if revenueBookings > 0 {
+			avgRevenue = float64(totalRevenue) / float64(revenueBookings)
 		}
 
 		occupancyRate := 0.0
 		if totalBookings > 0 && apt.Status == domain.AptStatusApproved {
-			occupancyRate = float64(completedBookings) / 30.0 * 100
+			occupancyRate = float64(revenueBookings) / 30.0 * 100
 			if occupancyRate > 100 {
 				occupancyRate = 100
 			}

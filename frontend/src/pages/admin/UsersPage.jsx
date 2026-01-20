@@ -9,6 +9,7 @@ import {
   HistoryOutlined,
   HomeOutlined,
   IdcardOutlined,
+  LockOutlined,
   UserOutlined
 } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -45,10 +46,13 @@ const UsersPage = () => {
   const [editingUserDetails, setEditingUserDetails] = useState(null);
   const [historyModalVisible, setHistoryModalVisible] = useState(false);
   const [selectedUserForHistory, setSelectedUserForHistory] = useState(null);
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+  const [selectedUserForPassword, setSelectedUserForPassword] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [form] = Form.useForm();
+  const [passwordForm] = Form.useForm();
   
   const queryClient = useQueryClient();
 
@@ -157,6 +161,19 @@ const UsersPage = () => {
     },
   });
 
+  const setPasswordMutation = useMutation({
+    mutationFn: ({ userId, password }) => usersAPI.adminSetUserPassword(userId, password),
+    onSuccess: () => {
+      message.success('Пароль успешно установлен');
+      setPasswordModalVisible(false);
+      setSelectedUserForPassword(null);
+      passwordForm.resetFields();
+    },
+    onError: (error) => {
+      message.error(error.response?.data?.error || 'Ошибка при установке пароля');
+    },
+  });
+
   // Обработчики
   const handleVerificationUpdate = (userId, status) => {
     updateVerificationMutation.mutate({ userId, status });
@@ -172,6 +189,29 @@ const UsersPage = () => {
 
   const handleDeleteUser = (userId) => {
     deleteUserMutation.mutate(userId);
+  };
+
+  const handleSetPassword = (user) => {
+    setSelectedUserForPassword(user);
+    setPasswordModalVisible(true);
+  };
+
+  const handlePasswordModalCancel = () => {
+    setPasswordModalVisible(false);
+    setSelectedUserForPassword(null);
+    passwordForm.resetFields();
+  };
+
+  const handlePasswordModalOk = async () => {
+    try {
+      const values = await passwordForm.validateFields();
+      setPasswordMutation.mutate({
+        userId: selectedUserForPassword.id,
+        password: values.password,
+      });
+    } catch (error) {
+      console.error('Ошибка валидации:', error);
+    }
   };
 
   const handleEditUser = (user) => {
@@ -250,6 +290,8 @@ const UsersPage = () => {
         return 'Консьерж';
       case 'user':
         return 'Пользователь';
+      case 'cleaner':
+        return 'Уборщик';
       default:
         return role;
     }
@@ -391,6 +433,15 @@ const UsersPage = () => {
               onClick={() => handleEditUser(record)}
             />
           </Tooltip>
+          {record.role !== 'user' && (
+            <Tooltip title="Установить пароль">
+              <Button
+                type="text"
+                icon={<LockOutlined />}
+                onClick={() => handleSetPassword(record)}
+              />
+            </Tooltip>
+          )}
           <Tooltip title="Изменить статус верификации">
             {record.renter_info?.verification_status === 'pending' && (
               <Space>
@@ -1067,6 +1118,80 @@ const UsersPage = () => {
         }}
         user={selectedUserForHistory}
       />
+
+      {/* Модал установки пароля */}
+      <Modal
+        title={
+          <div className="flex items-center space-x-2">
+            <LockOutlined />
+            <span>Установить пароль</span>
+          </div>
+        }
+        open={passwordModalVisible}
+        onOk={handlePasswordModalOk}
+        onCancel={handlePasswordModalCancel}
+        confirmLoading={setPasswordMutation.isPending}
+        okText="Установить"
+        cancelText="Отмена"
+        width={isMobile ? '95%' : 400}
+        style={isMobile ? { top: 20 } : {}}
+      >
+        {selectedUserForPassword && (
+          <div className="space-y-4">
+            <div className="p-3 bg-gray-50 rounded-lg">
+              <div className="text-sm text-gray-500 mb-1">Пользователь:</div>
+              <div className="font-medium">
+                {selectedUserForPassword.first_name} {selectedUserForPassword.last_name}
+              </div>
+              <div className="text-sm text-gray-500">{selectedUserForPassword.email}</div>
+              {selectedUserForPassword.phone && (
+                <div className="text-sm text-gray-500">{selectedUserForPassword.phone}</div>
+              )}
+              <Tag color={getRoleColor(selectedUserForPassword.role)} className="mt-2">
+                {getRoleText(selectedUserForPassword.role)}
+              </Tag>
+            </div>
+            
+            <Form form={passwordForm} layout="vertical">
+              <Form.Item
+                label="Новый пароль"
+                name="password"
+                rules={[
+                  { required: true, message: 'Введите пароль' },
+                  { min: 6, message: 'Пароль должен быть минимум 6 символов' }
+                ]}
+              >
+                <Input.Password 
+                  placeholder="Введите новый пароль"
+                  prefix={<LockOutlined className="text-gray-400" />}
+                />
+              </Form.Item>
+              
+              <Form.Item
+                label="Подтверждение пароля"
+                name="confirmPassword"
+                dependencies={['password']}
+                rules={[
+                  { required: true, message: 'Подтвердите пароль' },
+                  ({ getFieldValue }) => ({
+                    validator(_, value) {
+                      if (!value || getFieldValue('password') === value) {
+                        return Promise.resolve();
+                      }
+                      return Promise.reject(new Error('Пароли не совпадают'));
+                    },
+                  }),
+                ]}
+              >
+                <Input.Password 
+                  placeholder="Подтвердите пароль"
+                  prefix={<LockOutlined className="text-gray-400" />}
+                />
+              </Form.Item>
+            </Form>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

@@ -69,6 +69,7 @@ func (h *UserHandler) RegisterRoutes(router *gin.RouterGroup) {
 		admin.GET("/users/:id", CacheMiddlewareWithTTL(h.responseCacheService, 5*time.Minute), h.AdminGetUserByID)
 		admin.PUT("/users/:id/role", h.AdminUpdateUserRole)
 		admin.PUT("/users/:id/status", h.AdminUpdateUserStatus)
+		admin.PUT("/users/:id/password", h.AdminSetUserPassword)
 		admin.DELETE("/users/:id", h.DeleteUserByAdmin)
 		admin.GET("/users/statistics", CacheMiddlewareWithTTL(h.responseCacheService, 10*time.Minute), h.AdminGetUserStatistics)
 		admin.GET("/users/:id/booking-history", h.AdminGetUserBookingHistory)
@@ -1230,6 +1231,65 @@ func (h *UserHandler) AdminUpdateUserStatus(c *gin.Context) {
 		"user_id":   userID,
 		"is_active": req.IsActive,
 		"status":    statusText,
+	}))
+}
+
+type AdminSetPasswordRequest struct {
+	Password string `json:"password" binding:"required,min=6"`
+}
+
+// @Summary Установка пароля владельцу недвижимости (админ)
+// @Description Устанавливает новый пароль пользователю. Доступно только для админов.
+// @Tags admin
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path int true "ID пользователя"
+// @Param request body AdminSetPasswordRequest true "Новый пароль"
+// @Success 200 {object} domain.SuccessResponse
+// @Failure 400 {object} domain.ErrorResponse
+// @Failure 401 {object} domain.ErrorResponse
+// @Failure 403 {object} domain.ErrorResponse
+// @Failure 404 {object} domain.ErrorResponse
+// @Failure 500 {object} domain.ErrorResponse
+// @Router /admin/users/{id}/password [put]
+func (h *UserHandler) AdminSetUserPassword(c *gin.Context) {
+	adminID, _, ok := utils.RequireAnyRole(c, domain.RoleAdmin)
+	if !ok {
+		return
+	}
+
+	userIDParam := c.Param("id")
+	userID, err := strconv.Atoi(userIDParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, domain.NewErrorResponse("некорректный ID пользователя"))
+		return
+	}
+
+	var req AdminSetPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, domain.NewErrorResponse("неверные данные запроса: пароль должен быть минимум 6 символов"))
+		return
+	}
+
+	err = h.userUseCase.AdminSetPassword(userID, req.Password, adminID)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, domain.NewErrorResponse("пользователь не найден"))
+		} else if strings.Contains(err.Error(), "only admins") {
+			c.JSON(http.StatusForbidden, domain.NewErrorResponse("недостаточно прав"))
+		} else if strings.Contains(err.Error(), "cannot be set for regular users") {
+			c.JSON(http.StatusBadRequest, domain.NewErrorResponse("пароль нельзя установить обычным пользователям"))
+		} else if strings.Contains(err.Error(), "at least 6 characters") {
+			c.JSON(http.StatusBadRequest, domain.NewErrorResponse("пароль должен содержать минимум 6 символов"))
+		} else {
+			c.JSON(http.StatusInternalServerError, domain.NewErrorResponse("ошибка установки пароля: "+err.Error()))
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, domain.NewSuccessResponse("пароль пользователя успешно установлен", gin.H{
+		"user_id": userID,
 	}))
 }
 

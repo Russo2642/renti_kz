@@ -1,6 +1,8 @@
 package domain
 
 import (
+	"fmt"
+	"strings"
 	"time"
 )
 
@@ -153,6 +155,7 @@ type NotificationUseCase interface {
 	NotifyPasswordReady(userID int, bookingID int, apartmentTitle string) error
 	NotifyBookingStartingSoon(userID int, bookingID int, apartmentTitle string, startsIn time.Duration) error
 	NotifyBookingEnding(userID int, bookingID int, apartmentTitle string) error
+	NotifyLockIssue(userID int, bookingID int, apartmentTitle string, issue string) error
 	NotifyPaymentRequired(userID int, bookingID int, apartmentTitle string, amount float64) error
 	NotifySessionFinished(ownerUserID int, bookingID int, apartmentTitle string, renterName string) error
 	NotifyExtensionRequested(ownerUserID int, bookingID int, apartmentTitle string, renterName string, duration int) error
@@ -196,4 +199,25 @@ type NotificationResponse struct {
 	ApartmentID *int                   `json:"apartment_id,omitempty"`
 	CreatedAt   string                 `json:"created_at"`
 	ReadAt      *string                `json:"read_at,omitempty"`
+}
+
+func ValidateExpoToken(token string) error {
+	if token == "" {
+		return fmt.Errorf("токен не может быть пустым")
+	}
+
+	if !strings.HasPrefix(token, "ExponentPushToken[") {
+		return fmt.Errorf("невалидный формат Expo токена: должен начинаться с 'ExponentPushToken['")
+	}
+
+	if !strings.HasSuffix(token, "]") {
+		return fmt.Errorf("невалидный формат Expo токена: должен заканчиваться на ']'")
+	}
+
+	innerToken := token[len("ExponentPushToken[") : len(token)-1]
+	if len(innerToken) < 10 {
+		return fmt.Errorf("невалидная длина Expo токена")
+	}
+
+	return nil
 }

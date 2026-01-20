@@ -183,6 +183,7 @@ type ApartmentUseCase interface {
 	GetDistrictStatistics() (map[string]int, error)
 	Update(apartment *Apartment) error
 	Delete(id int) error
+	DeleteByAdmin(id int, force bool, adminID int) (hasActiveBookings bool, activeBookingsCount int, err error)
 
 	AddPhotos(apartmentID int, filesData [][]byte) ([]string, error)
 	AddPhotosParallel(apartmentID int, filesData [][]byte) ([]string, error)

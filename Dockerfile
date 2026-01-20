@@ -48,9 +48,6 @@ COPY --from=builder /app/internal/templates ./internal/templates
 # Создаем папку для конфигурации
 RUN mkdir -p /app/config
 
-# Копируем конфигурационные файлы
-COPY --from=builder /app/internal/config/firebase-credentials.json /app/config/
-
 # Создаем папку для uploads
 RUN mkdir -p /app/uploads
 

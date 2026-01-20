@@ -2,17 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Card, Row, Col, Statistic, Select, DatePicker, Typography, Table,
-  Space, Progress, Tag, Divider, Alert
+  Space, Progress, Tag, Divider, Alert, Spin, Empty
 } from 'antd';
 import {
   DollarOutlined, CalendarOutlined, HomeOutlined, RiseOutlined,
-  PercentageOutlined, ClockCircleOutlined, StarOutlined, UserOutlined
+  PercentageOutlined, ClockCircleOutlined, StarOutlined, UserOutlined,
+  CheckCircleOutlined, CloseCircleOutlined, LoadingOutlined
 } from '@ant-design/icons';
 import {
   LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
-import { apartmentsAPI, bookingsAPI } from '../../lib/api.js';
+import { apartmentsAPI } from '../../lib/api.js';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -24,7 +25,6 @@ const OwnerStatisticsPage = () => {
     dayjs().subtract(1, 'month'),
     dayjs()
   ]);
-  const [selectedApartment, setSelectedApartment] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   // Отслеживание изменения размера экрана
@@ -37,164 +37,189 @@ const OwnerStatisticsPage = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Получение квартир владельца
-  const { data: apartmentsData } = useQuery({
-    queryKey: ['owner-apartments'],
-    queryFn: () => apartmentsAPI.getMyApartments()
+  const { data: statsResponse, isLoading, isError, error } = useQuery({
+    queryKey: ['owner-statistics', dateRange],
+    queryFn: () => apartmentsAPI.getOwnerStatistics({
+      date_from: dateRange?.[0]?.format('YYYY-MM-DD'),
+      date_to: dateRange?.[1]?.format('YYYY-MM-DD')
+    }),
+    enabled: !!dateRange && dateRange.length === 2,
   });
 
-  // Получение статистики доходов
-  const { data: revenueData, isLoading: revenueLoading } = useQuery({
-    queryKey: ['owner-revenue-stats', dateRange, selectedApartment],
-    queryFn: () => {
-      // Здесь должен быть endpoint для получения статистики доходов
-      // Пока используем заглушку
-      return Promise.resolve({
-        total_revenue: 850000,
-        period_revenue: 125000,
-        growth_percentage: 15.3,
-        daily_revenue: generateDailyRevenue(),
-        monthly_revenue: generateMonthlyRevenue(),
-        apartment_revenue: generateApartmentRevenue(),
-        occupancy_rate: 78.5,
-        average_booking_value: 25000,
-        top_apartments: generateTopApartments()
-      });
-    }
-  });
+  const stats = statsResponse?.data;
+  const apartmentStats = stats?.apartments || {};
+  const bookingStats = stats?.bookings || {};
+  const financialStats = stats?.financial || {};
+  const efficiencyStats = stats?.efficiency || {};
 
-  // Получение статистики бронирований
-  const { data: bookingStats } = useQuery({
-    queryKey: ['owner-booking-stats', dateRange, selectedApartment],
-    queryFn: () => {
-      return Promise.resolve({
-        total_bookings: 45,
-        completed_bookings: 38,
-        cancelled_bookings: 4,
-        pending_bookings: 3,
-        booking_trends: generateBookingTrends(),
-        status_distribution: [
-          { name: 'Завершено', value: 38, color: '#52c41a' },
-          { name: 'Активные', value: 3, color: '#1890ff' },
-          { name: 'Отменено', value: 4, color: '#ff4d4f' }
-        ]
-      });
-    }
-  });
+  // Преобразование данных для графиков
+  const revenueByMonthData = React.useMemo(() => {
+    const monthlyRevenue = financialStats?.revenue_by_month || {};
+    return Object.entries(monthlyRevenue)
+      .map(([month, revenue]) => ({
+        month: dayjs(month).format('MMM YYYY'),
+        revenue,
+        sortKey: month
+      }))
+      .sort((a, b) => a.sortKey.localeCompare(b.sortKey))
+      .map(({ month, revenue }) => ({ month, revenue }));
+  }, [financialStats?.revenue_by_month]);
 
-  // Функции для генерации мок данных
-  function generateDailyRevenue() {
-    const data = [];
-    for (let i = 30; i >= 0; i--) {
-      const date = dayjs().subtract(i, 'day');
-      data.push({
-        date: date.format('DD.MM'),
-        revenue: Math.floor(Math.random() * 15000) + 5000,
-        bookings: Math.floor(Math.random() * 5) + 1
-      });
-    }
-    return data;
-  }
+  // Данные для круговой диаграммы статусов бронирований
+  const bookingStatusData = React.useMemo(() => {
+    const byStatus = bookingStats?.by_status || {};
+    const statusConfig = {
+      created: { name: 'Создано', color: '#1890ff' },
+      pending: { name: 'Ожидает', color: '#faad14' },
+      approved: { name: 'Одобрено', color: '#52c41a' },
+      rejected: { name: 'Отклонено', color: '#ff4d4f' },
+      active: { name: 'Активно', color: '#13c2c2' },
+      completed: { name: 'Завершено', color: '#722ed1' },
+      canceled: { name: 'Отменено', color: '#f5222d' },
+    };
 
-  function generateMonthlyRevenue() {
-    const data = [];
-    for (let i = 11; i >= 0; i--) {
-      const date = dayjs().subtract(i, 'month');
-      data.push({
-        month: date.format('MMM YYYY'),
-        revenue: Math.floor(Math.random() * 100000) + 50000,
-        bookings: Math.floor(Math.random() * 20) + 10,
-        occupancy: Math.floor(Math.random() * 30) + 60
-      });
-    }
-    return data;
-  }
+    return Object.entries(byStatus)
+      .filter(([_, value]) => value > 0)
+      .map(([status, value]) => ({
+        name: statusConfig[status]?.name || status,
+        value,
+        color: statusConfig[status]?.color || '#8884d8'
+      }));
+  }, [bookingStats?.by_status]);
 
-  function generateApartmentRevenue() {
-    return apartmentsData?.apartments?.map((apt, index) => ({
-      id: apt.id,
-      name: apt.title,
-      revenue: Math.floor(Math.random() * 50000) + 20000,
-      bookings: Math.floor(Math.random() * 10) + 5,
-      occupancy: Math.floor(Math.random() * 40) + 50,
-      rating: (Math.random() * 2 + 3).toFixed(1)
-    })) || [];
-  }
+  // Данные для диаграммы статусов квартир
+  const apartmentStatusData = React.useMemo(() => {
+    const byStatus = apartmentStats?.by_status || {};
+    const statusConfig = {
+      approved: { name: 'Одобрено', color: '#52c41a' },
+      pending: { name: 'На модерации', color: '#faad14' },
+      rejected: { name: 'Отклонено', color: '#ff4d4f' },
+      blocked: { name: 'Заблокировано', color: '#f5222d' },
+    };
 
-  function generateTopApartments() {
-    return apartmentsData?.apartments?.slice(0, 5).map((apt, index) => ({
-      id: apt.id,
-      name: apt.title,
-      revenue: Math.floor(Math.random() * 50000) + 30000,
-      bookings: Math.floor(Math.random() * 8) + 8,
-      growth: (Math.random() * 40 - 10).toFixed(1)
-    })) || [];
-  }
+    return Object.entries(byStatus)
+      .filter(([_, value]) => value > 0)
+      .map(([status, value]) => ({
+        name: statusConfig[status]?.name || status,
+        value,
+        color: statusConfig[status]?.color || '#8884d8'
+      }));
+  }, [apartmentStats?.by_status]);
 
-  function generateBookingTrends() {
-    const data = [];
-    for (let i = 6; i >= 0; i--) {
-      const date = dayjs().subtract(i, 'month');
-      data.push({
-        month: date.format('MMM'),
-        bookings: Math.floor(Math.random() * 15) + 5,
-        revenue: Math.floor(Math.random() * 80000) + 40000
-      });
-    }
-    return data;
-  }
+  // Данные для диаграммы дохода по длительности
+  const revenueByDurationData = React.useMemo(() => {
+    const byDuration = financialStats?.revenue_by_duration || {};
+    const durationConfig = {
+      short: { name: 'Краткосрочные (до 3ч)', color: '#1890ff' },
+      medium: { name: 'Средние (3-12ч)', color: '#52c41a' },
+      long: { name: 'Долгие (12-24ч)', color: '#722ed1' },
+      daily: { name: 'Посуточные', color: '#fa8c16' },
+    };
 
+    return Object.entries(byDuration)
+      .filter(([_, value]) => value > 0)
+      .map(([duration, value]) => ({
+        name: durationConfig[duration]?.name || duration,
+        value,
+        color: durationConfig[duration]?.color || '#8884d8'
+      }));
+  }, [financialStats?.revenue_by_duration]);
+
+  // Колонки для таблицы эффективности квартир
   const apartmentColumns = [
     {
       title: 'Квартира',
-      dataIndex: 'name',
       key: 'name',
-      render: (name) => <Text strong>{name}</Text>
+      render: (record) => (
+        <Text strong>
+          {record.street}, {record.building}, кв. {record.apartment_number}
+        </Text>
+      )
+    },
+    {
+      title: 'Статус',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status) => {
+        const config = {
+          approved: { color: 'green', text: 'Активна' },
+          pending: { color: 'orange', text: 'На модерации' },
+          rejected: { color: 'red', text: 'Отклонена' },
+          blocked: { color: 'red', text: 'Заблокирована' },
+        };
+        const cfg = config[status] || { color: 'default', text: status };
+        return <Tag color={cfg.color}>{cfg.text}</Tag>;
+      }
     },
     {
       title: 'Доход',
-      dataIndex: 'revenue',
-      key: 'revenue',
+      dataIndex: 'total_revenue',
+      key: 'total_revenue',
       render: (revenue) => (
         <Text strong style={{ color: '#52c41a' }}>
           {revenue?.toLocaleString()} ₸
         </Text>
       ),
-      sorter: (a, b) => a.revenue - b.revenue
+      sorter: (a, b) => a.total_revenue - b.total_revenue
     },
     {
       title: 'Бронирований',
-      dataIndex: 'bookings',
-      key: 'bookings',
+      dataIndex: 'total_bookings',
+      key: 'total_bookings',
       render: (bookings) => <Text>{bookings}</Text>,
-      sorter: (a, b) => a.bookings - b.bookings
+      sorter: (a, b) => a.total_bookings - b.total_bookings
     },
     {
-      title: 'Загруженность',
-      dataIndex: 'occupancy',
-      key: 'occupancy',
-      render: (occupancy) => (
-        <Progress
-          percent={occupancy}
-          size="small"
-          status={occupancy > 70 ? 'success' : occupancy > 50 ? 'normal' : 'exception'}
-        />
-      ),
-      sorter: (a, b) => a.occupancy - b.occupancy
-    },
-    {
-      title: 'Рейтинг',
-      dataIndex: 'rating',
-      key: 'rating',
-      render: (rating) => (
-        <div className="flex items-center space-x-1">
-          <StarOutlined style={{ color: '#faad14' }} />
-          <Text>{rating}</Text>
+      title: 'Завершено',
+      dataIndex: 'completed_bookings',
+      key: 'completed_bookings',
+      render: (completed, record) => (
+        <div className="flex items-center space-x-2">
+          <Text>{completed}</Text>
+          {record.total_bookings > 0 && (
+            <Text type="secondary" className="text-xs">
+              ({Math.round((completed / record.total_bookings) * 100)}%)
+            </Text>
+          )}
         </div>
+      )
+    },
+    {
+      title: 'Ср. доход',
+      dataIndex: 'avg_revenue',
+      key: 'avg_revenue',
+      render: (avg) => (
+        <Text>{Math.round(avg || 0).toLocaleString()} ₸</Text>
       ),
-      sorter: (a, b) => parseFloat(a.rating) - parseFloat(b.rating)
+      sorter: (a, b) => (a.avg_revenue || 0) - (b.avg_revenue || 0)
     }
   ];
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Spin indicator={<LoadingOutlined style={{ fontSize: 48 }} spin />} />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className={`space-y-6 ${isMobile ? 'p-4' : 'p-6'}`}>
+        <Alert
+          message="Ошибка загрузки статистики"
+          description={error?.message || 'Не удалось загрузить данные. Попробуйте позже.'}
+          type="error"
+          showIcon
+        />
+      </div>
+    );
+  }
+
+  const totalBookings = bookingStats?.total_bookings || 0;
+  const revenueBookings = financialStats?.revenue_bookings || 0;
+  const completedBookings = bookingStats?.by_status?.completed || 0;
+  const canceledBookings = bookingStats?.by_status?.canceled || 0;
 
   return (
     <div className={`space-y-6 ${isMobile ? 'p-4' : 'p-6'}`}>
@@ -203,31 +228,22 @@ const OwnerStatisticsPage = () => {
         <div>
           <Title level={2} className={isMobile ? 'text-xl' : ''}>Статистика и аналитика</Title>
           <Text type="secondary" className={isMobile ? 'text-sm' : ''}>
-            Подробная аналитика доходов и эффективности
+            Подробная аналитика доходов и эффективности за период
           </Text>
         </div>
         
         <Space wrap direction={isMobile ? 'vertical' : 'horizontal'} className={isMobile ? 'w-full' : ''}>
-          <Select
-            value={selectedApartment}
-            onChange={setSelectedApartment}
-            placeholder="Выберите квартиру"
-            style={{ width: isMobile ? '100%' : 200 }}
-            allowClear
-          >
-            <Option value={null}>Все квартиры</Option>
-            {(apartmentsData?.data?.apartments || []).map(apartment => (
-              <Option key={apartment.id} value={apartment.id}>
-                {apartment.title || `${apartment.street}, ${apartment.building}`}
-              </Option>
-            ))}
-          </Select>
-          
           <RangePicker
             value={dateRange}
             onChange={setDateRange}
             format="DD.MM.YYYY"
             style={{ width: isMobile ? '100%' : 'auto' }}
+            presets={[
+              { label: 'Неделя', value: [dayjs().subtract(7, 'day'), dayjs()] },
+              { label: 'Месяц', value: [dayjs().subtract(1, 'month'), dayjs()] },
+              { label: '3 месяца', value: [dayjs().subtract(3, 'month'), dayjs()] },
+              { label: 'Год', value: [dayjs().subtract(1, 'year'), dayjs()] },
+            ]}
           />
         </Space>
       </div>
@@ -238,7 +254,7 @@ const OwnerStatisticsPage = () => {
           <Card className="text-center">
             <Statistic
               title="Общий доход"
-              value={revenueData?.total_revenue || 0}
+              value={financialStats?.total_revenue || 0}
               prefix={<DollarOutlined className="text-green-500" />}
               suffix="₸"
               precision={0}
@@ -247,14 +263,8 @@ const OwnerStatisticsPage = () => {
                 fontSize: isMobile ? '18px' : '24px'
               }}
             />
-            <Progress 
-              percent={75} 
-              showInfo={false} 
-              strokeColor="#52c41a" 
-              size={isMobile ? 'small' : 'default'}
-            />
             <Text className={`text-green-600 ${isMobile ? 'text-xs' : 'text-sm'}`}>
-              +{revenueData?.growth_percentage || 0}% к прошлому периоду
+              За выбранный период
             </Text>
           </Card>
         </Col>
@@ -262,24 +272,18 @@ const OwnerStatisticsPage = () => {
         <Col xs={12} sm={8} md={6} lg={4}>
           <Card className="text-center">
             <Statistic
-              title="Заполняемость"
-              value={revenueData?.occupancy_rate || 0}
+              title="Средний чек"
+              value={Math.round(financialStats?.avg_booking_value || 0)}
               prefix={<PercentageOutlined className="text-blue-500" />}
-              suffix="%"
-              precision={1}
+              suffix="₸"
+              precision={0}
               valueStyle={{ 
                 color: '#1890ff',
                 fontSize: isMobile ? '18px' : '24px'
               }}
             />
-            <Progress 
-              percent={revenueData?.occupancy_rate || 0} 
-              showInfo={false} 
-              strokeColor="#1890ff"
-              size={isMobile ? 'small' : 'default'}
-            />
             <Text className={`text-blue-600 ${isMobile ? 'text-xs' : 'text-sm'}`}>
-              Средняя заполняемость
+              Средняя стоимость бронирования
             </Text>
           </Card>
         </Col>
@@ -288,18 +292,12 @@ const OwnerStatisticsPage = () => {
           <Card className="text-center">
             <Statistic
               title="Всего бронирований"
-              value={bookingStats?.total_bookings || 0}
+              value={totalBookings}
               prefix={<CalendarOutlined className="text-purple-500" />}
               valueStyle={{ 
                 color: '#722ed1',
                 fontSize: isMobile ? '18px' : '24px'
               }}
-            />
-            <Progress 
-              percent={80} 
-              showInfo={false} 
-              strokeColor="#722ed1"
-              size={isMobile ? 'small' : 'default'}
             />
             <Text className={`text-purple-600 ${isMobile ? 'text-xs' : 'text-sm'}`}>
               За выбранный период
@@ -310,24 +308,16 @@ const OwnerStatisticsPage = () => {
         <Col xs={12} sm={8} md={6} lg={4}>
           <Card className="text-center">
             <Statistic
-              title="Средний чек"
-              value={revenueData?.average_booking_value || 0}
-              prefix={<DollarOutlined className="text-orange-500" />}
-              suffix="₸"
-              precision={0}
+              title="Оплаченные"
+              value={revenueBookings}
+              prefix={<CheckCircleOutlined className="text-cyan-500" />}
               valueStyle={{ 
-                color: '#fa8c16',
+                color: '#13c2c2',
                 fontSize: isMobile ? '18px' : '24px'
               }}
             />
-            <Progress 
-              percent={60} 
-              showInfo={false} 
-              strokeColor="#fa8c16"
-              size={isMobile ? 'small' : 'default'}
-            />
-            <Text className={`text-orange-600 ${isMobile ? 'text-xs' : 'text-sm'}`}>
-              Средняя стоимость бронирования
+            <Text className={`text-cyan-600 ${isMobile ? 'text-xs' : 'text-sm'}`}>
+              Одобрено, активных и завершенных
             </Text>
           </Card>
         </Col>
@@ -335,22 +325,60 @@ const OwnerStatisticsPage = () => {
         <Col xs={12} sm={8} md={6} lg={4}>
           <Card className="text-center">
             <Statistic
-              title="Активные квартиры"
-              value={apartmentsData?.data?.apartments?.length || 0}
+              title="Завершено"
+              value={completedBookings}
+              prefix={<CheckCircleOutlined className="text-green-500" />}
+              valueStyle={{ 
+                color: '#52c41a',
+                fontSize: isMobile ? '18px' : '24px'
+              }}
+            />
+            {totalBookings > 0 && (
+              <Progress 
+                percent={Math.round((completedBookings / totalBookings) * 100)} 
+                showInfo={false} 
+                strokeColor="#52c41a"
+                size={isMobile ? 'small' : 'default'}
+              />
+            )}
+          </Card>
+        </Col>
+
+        <Col xs={12} sm={8} md={6} lg={4}>
+          <Card className="text-center">
+            <Statistic
+              title="Отменено"
+              value={canceledBookings}
+              prefix={<CloseCircleOutlined className="text-red-500" />}
+              valueStyle={{ 
+                color: '#ff4d4f',
+                fontSize: isMobile ? '18px' : '24px'
+              }}
+            />
+            {totalBookings > 0 && (
+              <Progress 
+                percent={Math.round((canceledBookings / totalBookings) * 100)} 
+                showInfo={false} 
+                strokeColor="#ff4d4f"
+                size={isMobile ? 'small' : 'default'}
+              />
+            )}
+          </Card>
+        </Col>
+
+        <Col xs={12} sm={8} md={6} lg={4}>
+          <Card className="text-center">
+            <Statistic
+              title="Квартир"
+              value={apartmentStats?.total_apartments || 0}
               prefix={<HomeOutlined className="text-cyan-500" />}
               valueStyle={{ 
                 color: '#13c2c2',
                 fontSize: isMobile ? '18px' : '24px'
               }}
             />
-            <Progress 
-              percent={90} 
-              showInfo={false} 
-              strokeColor="#13c2c2"
-              size={isMobile ? 'small' : 'default'}
-            />
             <Text className={`text-cyan-600 ${isMobile ? 'text-xs' : 'text-sm'}`}>
-              Количество активных объектов
+              Всего в портфеле
             </Text>
           </Card>
         </Col>
@@ -358,205 +386,260 @@ const OwnerStatisticsPage = () => {
 
       {/* Графики */}
       <Row gutter={[16, 16]}>
-        {/* График доходов */}
+        {/* График доходов по месяцам */}
         <Col xs={24} lg={16}>
-          <Card title="Динамика доходов" className={isMobile ? 'h-80' : 'h-96'}>
-            <ResponsiveContainer width="100%" height={isMobile ? 250 : 300}>
-              <AreaChart data={revenueData?.daily_revenue || []}>
-                <defs>
-                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#52c41a" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#52c41a" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <XAxis 
-                  dataKey="date" 
-                  fontSize={isMobile ? 10 : 12}
-                  interval={isMobile ? 'preserveStartEnd' : 0}
-                />
-                <YAxis fontSize={isMobile ? 10 : 12} />
-                <CartesianGrid strokeDasharray="3 3" />
-                <Tooltip 
-                  formatter={(value) => [`${value.toLocaleString()} ₸`, 'Доход']}
-                  labelStyle={{ fontSize: isMobile ? '12px' : '14px' }}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="revenue" 
-                  stroke="#52c41a" 
-                  fillOpacity={1} 
-                  fill="url(#colorRevenue)" 
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+          <Card title="Динамика доходов по месяцам" className={isMobile ? 'h-80' : 'h-96'}>
+            {revenueByMonthData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={isMobile ? 250 : 300}>
+                <AreaChart data={revenueByMonthData}>
+                  <defs>
+                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#52c41a" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#52c41a" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <XAxis 
+                    dataKey="month" 
+                    fontSize={isMobile ? 10 : 12}
+                    interval={isMobile ? 'preserveStartEnd' : 0}
+                  />
+                  <YAxis fontSize={isMobile ? 10 : 12} />
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <Tooltip 
+                    formatter={(value) => [`${value.toLocaleString()} ₸`, 'Доход']}
+                    labelStyle={{ fontSize: isMobile ? '12px' : '14px' }}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="revenue" 
+                    stroke="#52c41a" 
+                    fillOpacity={1} 
+                    fill="url(#colorRevenue)" 
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <Empty description="Нет данных за выбранный период" />
+            )}
           </Card>
         </Col>
 
-        {/* Распределение по статусам */}
+        {/* Распределение по статусам бронирований */}
         <Col xs={24} lg={8}>
           <Card title="Статусы бронирований" className={isMobile ? 'h-80' : 'h-96'}>
-            <ResponsiveContainer width="100%" height={isMobile ? 250 : 300}>
-              <PieChart>
-                <Pie
-                  data={bookingStats?.status_distribution || []}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => isMobile ? `${(percent * 100).toFixed(0)}%` : `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={isMobile ? 70 : 80}
-                  fill="#8884d8"
-                  dataKey="value"
-                  fontSize={isMobile ? 10 : 12}
-                >
-                  {(bookingStats?.status_distribution || []).map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                {!isMobile && <Legend />}
-              </PieChart>
-            </ResponsiveContainer>
+            {bookingStatusData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={isMobile ? 250 : 300}>
+                <PieChart>
+                  <Pie
+                    data={bookingStatusData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => isMobile ? `${(percent * 100).toFixed(0)}%` : `${name} ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={isMobile ? 70 : 80}
+                    fill="#8884d8"
+                    dataKey="value"
+                    fontSize={isMobile ? 10 : 12}
+                  >
+                    {bookingStatusData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  {!isMobile && <Legend />}
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <Empty description="Нет бронирований" />
+            )}
           </Card>
         </Col>
       </Row>
 
-      {/* Месячная динамика */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24}>
-          <Card title="Месячная динамика доходов" className={isMobile ? 'h-80' : 'h-96'}>
-            <ResponsiveContainer width="100%" height={isMobile ? 250 : 300}>
-              <BarChart data={revenueData?.monthly_revenue || []}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="month" 
-                  fontSize={isMobile ? 10 : 12}
-                  angle={isMobile ? -45 : 0}
-                  textAnchor={isMobile ? 'end' : 'middle'}
-                  height={isMobile ? 60 : 30}
-                />
-                <YAxis fontSize={isMobile ? 10 : 12} />
-                <Tooltip 
-                  formatter={(value, name) => [
-                    `${value.toLocaleString()} ₸`, 
-                    name === 'revenue' ? 'Доход' : name === 'bookings' ? 'Бронирования' : 'Заполняемость %'
-                  ]}
-                />
-                <Legend />
-                <Bar dataKey="revenue" fill="#52c41a" name="Доход" />
-                <Bar dataKey="bookings" fill="#1890ff" name="Бронирования" />
-              </BarChart>
-            </ResponsiveContainer>
-          </Card>
-        </Col>
-      </Row>
-
-      {/* Топ квартир */}
+      {/* Доход по типу аренды */}
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={12}>
-          <Card title="Топ квартир по доходности">
-            <div className="space-y-3">
-              {(revenueData?.top_apartments || []).map((apartment, index) => (
-                <div key={index} className={`flex items-center justify-between p-3 bg-gray-50 rounded-lg ${isMobile ? 'flex-col space-y-2' : ''}`}>
-                  <div className={`flex items-center space-x-3 ${isMobile ? 'w-full' : ''}`}>
-                    <div className={`bg-blue-100 rounded-lg flex items-center justify-center ${isMobile ? 'w-8 h-8' : 'w-10 h-10'}`}>
-                      <span className={`text-blue-600 font-bold ${isMobile ? 'text-sm' : ''}`}>#{index + 1}</span>
-                    </div>
-                    <div className={isMobile ? 'flex-1' : ''}>
-                      <div className={`font-medium ${isMobile ? 'text-sm' : ''}`}>{apartment.name}</div>
-                      <div className={`text-gray-500 ${isMobile ? 'text-xs' : 'text-sm'}`}>
-                        {apartment.bookings} бронирований
-                      </div>
-                    </div>
+          <Card title="Доход по типу аренды" className={isMobile ? 'h-80' : 'h-96'}>
+            {revenueByDurationData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={isMobile ? 250 : 300}>
+                <BarChart data={revenueByDurationData} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" fontSize={isMobile ? 10 : 12} />
+                  <YAxis 
+                    dataKey="name" 
+                    type="category" 
+                    fontSize={isMobile ? 10 : 12}
+                    width={isMobile ? 100 : 150}
+                  />
+                  <Tooltip 
+                    formatter={(value) => [`${value.toLocaleString()} ₸`, 'Доход']}
+                  />
+                  <Bar dataKey="value" name="Доход">
+                    {revenueByDurationData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <Empty description="Нет данных о доходе" />
+            )}
+          </Card>
+        </Col>
+
+        {/* Статусы квартир */}
+        <Col xs={24} lg={12}>
+          <Card title="Статусы квартир" className={isMobile ? 'h-80' : 'h-96'}>
+            {apartmentStatusData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={isMobile ? 250 : 300}>
+                <PieChart>
+                  <Pie
+                    data={apartmentStatusData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={true}
+                    label={({ name, value }) => `${name}: ${value}`}
+                    outerRadius={isMobile ? 70 : 100}
+                    fill="#8884d8"
+                    dataKey="value"
+                    fontSize={isMobile ? 10 : 12}
+                  >
+                    {apartmentStatusData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <Empty description="Нет данных о квартирах" />
+            )}
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Топ квартир по доходности */}
+      {efficiencyStats?.top_performers?.length > 0 && (
+        <Card title="Топ квартир по доходности">
+          <div className="space-y-3">
+            {efficiencyStats.top_performers.map((apartment, index) => (
+              <div key={apartment.apartment_id} className={`flex items-center justify-between p-3 bg-gray-50 rounded-lg ${isMobile ? 'flex-col space-y-2' : ''}`}>
+                <div className={`flex items-center space-x-3 ${isMobile ? 'w-full' : ''}`}>
+                  <div className={`bg-blue-100 rounded-lg flex items-center justify-center ${isMobile ? 'w-8 h-8' : 'w-10 h-10'}`}>
+                    <span className={`text-blue-600 font-bold ${isMobile ? 'text-sm' : ''}`}>#{index + 1}</span>
                   </div>
-                  <div className={`text-right ${isMobile ? 'w-full text-center' : ''}`}>
-                    <div className={`font-bold text-green-600 ${isMobile ? 'text-base' : 'text-lg'}`}>
-                      {apartment.revenue.toLocaleString()} ₸
+                  <div className={isMobile ? 'flex-1' : ''}>
+                    <div className={`font-medium ${isMobile ? 'text-sm' : ''}`}>
+                      {apartment.street}, {apartment.building}, кв. {apartment.apartment_number}
                     </div>
                     <div className={`text-gray-500 ${isMobile ? 'text-xs' : 'text-sm'}`}>
-                      Заполняемость {apartment.occupancy}%
+                      {apartment.completed_bookings} завершено из {apartment.total_bookings} бронирований
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          </Card>
-        </Col>
+                <div className={`text-right ${isMobile ? 'w-full text-center' : ''}`}>
+                  <div className={`font-bold text-green-600 ${isMobile ? 'text-base' : 'text-lg'}`}>
+                    {apartment.total_revenue.toLocaleString()} ₸
+                  </div>
+                  <div className={`text-gray-500 ${isMobile ? 'text-xs' : 'text-sm'}`}>
+                    Ср. чек: {Math.round(apartment.avg_revenue || 0).toLocaleString()} ₸
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
-        <Col xs={24} lg={12}>
-          <Card title="Ключевые показатели">
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className={isMobile ? 'text-sm' : ''}>Средняя длительность аренды</span>
-                <span className={`font-semibold ${isMobile ? 'text-sm' : ''}`}>3.2 дня</span>
-              </div>
-              <Divider className="my-2" />
-              
-              <div className="flex justify-between items-center">
-                <span className={isMobile ? 'text-sm' : ''}>Коэффициент конверсии</span>
-                <span className={`font-semibold text-green-600 ${isMobile ? 'text-sm' : ''}`}>87%</span>
-              </div>
-              <Progress percent={87} strokeColor="#52c41a" size={isMobile ? 'small' : 'default'} />
-              
-              <div className="flex justify-between items-center">
-                <span className={isMobile ? 'text-sm' : ''}>Время отклика</span>
-                <span className={`font-semibold ${isMobile ? 'text-sm' : ''}`}>1.2 часа</span>
-              </div>
-              <Progress percent={95} strokeColor="#1890ff" size={isMobile ? 'small' : 'default'} />
-              
-              <div className="flex justify-between items-center">
-                <span className={isMobile ? 'text-sm' : ''}>Повторные бронирования</span>
-                <span className={`font-semibold text-purple-600 ${isMobile ? 'text-sm' : ''}`}>23%</span>
-              </div>
-              <Progress percent={23} strokeColor="#722ed1" size={isMobile ? 'small' : 'default'} />
-              
-              <div className="flex justify-between items-center">
-                <span className={isMobile ? 'text-sm' : ''}>Отмены после подтверждения</span>
-                <span className={`font-semibold text-orange-600 ${isMobile ? 'text-sm' : ''}`}>5%</span>
-              </div>
-              <Progress percent={5} strokeColor="#fa8c16" size={isMobile ? 'small' : 'default'} />
-            </div>
-          </Card>
-        </Col>
-      </Row>
+      {/* Детальная таблица эффективности квартир */}
+      <Card title="Эффективность квартир">
+        <Table
+          columns={apartmentColumns}
+          dataSource={efficiencyStats?.apartment_performance || []}
+          rowKey="apartment_id"
+          scroll={{ x: 800 }}
+          size={isMobile ? 'small' : 'default'}
+          pagination={{ 
+            pageSize: 10,
+            showSizeChanger: !isMobile,
+            showTotal: (total) => `Всего ${total} квартир`,
+            responsive: true,
+            simple: isMobile,
+          }}
+          locale={{
+            emptyText: <Empty description="Нет данных о квартирах" />
+          }}
+        />
+      </Card>
 
-      {/* Рекомендации */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24}>
-          <Card title="Рекомендации для улучшения">
-            <Row gutter={[16, 16]}>
-              <Col xs={24} sm={12} md={8}>
-                <Alert
-                  message="Повысьте цены"
-                  description="Ваша заполняемость выше 80%. Рассмотрите возможность повышения цен на 10-15%."
-                  type="success"
-                  showIcon
-                  className={isMobile ? 'text-sm' : ''}
-                />
+      {/* Популярные квартиры */}
+      {bookingStats?.popular_apartments?.length > 0 && (
+        <Card title="Самые популярные квартиры (по количеству бронирований)">
+          <Row gutter={[16, 16]}>
+            {bookingStats.popular_apartments.map((apt, index) => (
+              <Col xs={24} sm={12} md={8} lg={6} key={apt.apartment_id}>
+                <Card size="small" className="text-center">
+                  <div className="text-2xl font-bold text-blue-600 mb-2">#{index + 1}</div>
+                  <div className="font-medium text-sm mb-1">
+                    {apt.street}, {apt.building}
+                  </div>
+                  <div className="text-gray-500 text-xs mb-2">кв. {apt.apartment_number}</div>
+                  <Tag color="blue">{apt.booking_count} бронирований</Tag>
+                </Card>
               </Col>
-              <Col xs={24} sm={12} md={8}>
-                <Alert
-                  message="Улучшите фото"
-                  description="Квартиры с профессиональными фото получают на 40% больше бронирований."
-                  type="info"
-                  showIcon
-                  className={isMobile ? 'text-sm' : ''}
-                />
-              </Col>
-              <Col xs={24} sm={12} md={8}>
-                <Alert
-                  message="Быстрее отвечайте"
-                  description="Сократите время ответа до 30 минут для увеличения конверсии."
-                  type="warning"
-                  showIcon
-                  className={isMobile ? 'text-sm' : ''}
-                />
-              </Col>
-            </Row>
-          </Card>
-        </Col>
-      </Row>
+            ))}
+          </Row>
+        </Card>
+      )}
+
+      {/* Средние показатели квартир */}
+      <Card title="Средние показатели портфеля">
+        <Row gutter={[16, 16]}>
+          <Col xs={24} sm={12} md={8}>
+            <Statistic
+              title="Средняя площадь"
+              value={Math.round(apartmentStats?.avg_area || 0)}
+              suffix="м²"
+              prefix={<HomeOutlined />}
+            />
+          </Col>
+          <Col xs={24} sm={12} md={8}>
+            <Statistic
+              title="Средняя цена (месяц)"
+              value={Math.round(apartmentStats?.avg_price || 0)}
+              suffix="₸"
+              prefix={<DollarOutlined />}
+            />
+          </Col>
+          <Col xs={24} sm={12} md={8}>
+            <Statistic
+              title="Средняя цена (сутки)"
+              value={Math.round(apartmentStats?.avg_daily_price || 0)}
+              suffix="₸"
+              prefix={<DollarOutlined />}
+            />
+          </Col>
+        </Row>
+
+        {Object.keys(apartmentStats?.by_room_count || {}).length > 0 && (
+          <>
+            <Divider />
+            <Title level={5}>Распределение по комнатности</Title>
+            <Space wrap>
+              {Object.entries(apartmentStats.by_room_count)
+                .sort(([a], [b]) => Number(a) - Number(b))
+                .map(([rooms, count]) => (
+                  <Tag key={rooms} color="blue">
+                    {rooms}-комн: {count} шт.
+                  </Tag>
+                ))}
+            </Space>
+          </>
+        )}
+      </Card>
     </div>
   );
 };
 
-export default OwnerStatisticsPage; 
+export default OwnerStatisticsPage;

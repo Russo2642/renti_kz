@@ -98,10 +98,7 @@ func InitApp(cfg *config.Config) (*App, error) {
 		return nil, fmt.Errorf("failed to initialize OTP repository: %w", err)
 	}
 
-	pushService, err := services.NewPushNotificationService(cfg.Firebase, notificationRepo)
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize push notification service: %w", err)
-	}
+	pushService := services.NewPushNotificationService(notificationRepo)
 
 	queueService, err := services.NewRedisQueueService(cfg.Redis, cfg.Notification)
 	if err != nil {
@@ -143,6 +140,7 @@ func InitApp(cfg *config.Config) (*App, error) {
 	lockAutoUpdateService.SetLockUseCase(lockUseCase)
 	favoriteUseCase := usecase.NewFavoriteUseCase(favoriteRepo, apartmentRepo, userRepo, propertyOwnerRepo)
 	notificationUseCase := usecase.NewNotificationUseCase(notificationRepo, pushService, queueService)
+	lockUseCase.SetNotificationUseCase(notificationUseCase)
 
 	conciergeUseCase := usecase.NewConciergeUseCase(conciergeRepo, userRepo, apartmentRepo, roleRepo, bookingRepo, chatRoomRepo)
 	cleanerUseCase := usecase.NewCleanerUseCase(cleanerRepo, userUseCase, apartmentRepo, nil)
@@ -209,6 +207,7 @@ func InitApp(cfg *config.Config) (*App, error) {
 
 	apartmentTypeUseCase := usecase.NewApartmentTypeUseCase(apartmentTypeRepo, userUseCase)
 	apartmentUseCase := usecase.NewApartmentUseCase(apartmentRepo, userRepo, propertyOwnerRepo, bookingUseCase, bookingRepo, contractUseCase, s3Storage)
+	apartmentUseCase.SetNotificationUseCase(notificationUseCase)
 
 	go redisScheduler.StartScheduler()
 

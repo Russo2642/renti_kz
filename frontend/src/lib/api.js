@@ -109,6 +109,7 @@ export const usersAPI = {
   adminUpdateUserStatus: (userId, isActive, reason) => 
     api.put(`/admin/users/${userId}/status`, { is_active: isActive, reason }),
   adminGetUserBookingHistory: (userId, params) => api.get(`/admin/users/${userId}/booking-history`, { params }),
+  adminSetUserPassword: (userId, password) => api.put(`/admin/users/${userId}/password`, { password }),
 };
 
 // API функции для квартир
@@ -140,7 +141,7 @@ export const apartmentsAPI = {
   adminGetAllApartments: (params) => api.get('/admin/apartments', { params }),
   adminGetApartmentsStatistics: () => api.get('/admin/apartments/statistics'),
   adminGetApartmentById: (id) => api.get(`/admin/apartments/${id}`),
-  adminDeleteApartment: (id) => api.delete(`/admin/apartments/${id}`),
+  adminDeleteApartment: (id, force = false) => api.delete(`/admin/apartments/${id}`, { params: { force } }),
   adminGetFullDashboardStats: () => api.get('/admin/dashboard/statistics'),
   adminGetDashboardStatistics: (params) => api.get('/admin/dashboard/statistics', { params }),
   adminGetApartmentBookingsHistory: (apartmentId, params) => api.get(`/admin/apartments/${apartmentId}/bookings-history`, { params }),

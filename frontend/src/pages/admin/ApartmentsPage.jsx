@@ -56,6 +56,7 @@ const ApartmentsPage = () => {
   const [apartmentTypeModalVisible, setApartmentTypeModalVisible] = useState(false);
   const [countersModalVisible, setCountersModalVisible] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [pendingDeleteId, setPendingDeleteId] = useState(null);
   const [form] = Form.useForm();
   const [statusForm] = Form.useForm();
   const [apartmentTypeForm] = Form.useForm();
@@ -181,12 +182,43 @@ const ApartmentsPage = () => {
 
   // Мутация для удаления квартиры (админская версия)
   const deleteMutation = useMutation({
-    mutationFn: apartmentsAPI.adminDeleteApartment,
+    mutationFn: ({ id, force = false }) => apartmentsAPI.adminDeleteApartment(id, force),
     onSuccess: () => {
       queryClient.invalidateQueries(['admin-apartments']);
       queryClient.invalidateQueries(['admin-dashboard-stats']);
       queryClient.invalidateQueries(['admin-apartments-statistics']);
+      setPendingDeleteId(null);
       message.success('Квартира удалена');
+    },
+    onError: (error, variables) => {
+      // Проверяем, есть ли активные бронирования (409 Conflict)
+      if (error.response?.status === 409) {
+        const errorMessage = error.response?.data?.message || error.response?.data?.error;
+        Modal.confirm({
+          title: 'Невозможно удалить квартиру',
+          content: (
+            <div>
+              <p>{errorMessage}</p>
+              <p className="text-red-600 font-medium mt-2">
+                Внимание: принудительное удаление отменит все активные бронирования!
+              </p>
+            </div>
+          ),
+          okText: 'Удалить принудительно',
+          okButtonProps: { danger: true },
+          cancelText: 'Отмена',
+          onOk: () => {
+            // Повторяем запрос с force=true
+            deleteMutation.mutate({ id: variables.id, force: true });
+          },
+          onCancel: () => {
+            setPendingDeleteId(null);
+          }
+        });
+      } else {
+        setPendingDeleteId(null);
+        message.error(error.response?.data?.message || 'Ошибка при удалении квартиры');
+      }
     }
   });
 
@@ -285,7 +317,8 @@ const ApartmentsPage = () => {
   };
 
   const handleDelete = (id) => {
-    deleteMutation.mutate(id);
+    setPendingDeleteId(id);
+    deleteMutation.mutate({ id, force: false });
   };
 
   const handleApartmentUpdate = (values) => {
@@ -369,8 +402,7 @@ const ApartmentsPage = () => {
       'pending': 'На модерации',
       'approved': 'Одобрено',
       'rejected': 'Отклонено',
-      'blocked': 'Заблокировано',
-      'inactive': 'Неактивно'
+      'needs_revision': 'Требует доработки'
     };
     return texts[status] || status;
   };
@@ -1065,8 +1097,7 @@ const ApartmentsPage = () => {
               <Option value="pending">На модерации</Option>
               <Option value="approved">Одобрено</Option>
               <Option value="rejected">Отклонено</Option>
-              <Option value="blocked">Заблокировано</Option>
-              <Option value="inactive">Неактивно</Option>
+              <Option value="needs_revision">Требует доработки</Option>
             </Select>
           </Form.Item>
           

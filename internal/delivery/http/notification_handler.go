@@ -293,6 +293,11 @@ func (h *NotificationHandler) RegisterDevice(c *gin.Context) {
 		return
 	}
 
+	if err := domain.ValidateExpoToken(req.DeviceToken); err != nil {
+		c.JSON(http.StatusBadRequest, domain.NewErrorResponse("невалидный Expo токен: "+err.Error()))
+		return
+	}
+
 	device := &domain.UserDevice{
 		UserID:      userID,
 		DeviceToken: req.DeviceToken,

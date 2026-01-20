@@ -347,7 +347,7 @@ func (h *CleanerHandler) AdminGetApartmentsNeedingCleaning(c *gin.Context) {
 
 // @Summary Получить профиль уборщицы
 // @Description Получение профиля уборщицы с расписанием
-// @Tags Cleaner
+// @Tags cleaner
 // @Accept json
 // @Produce json
 // @Success 200 {object} domain.SuccessResponse{data=domain.Cleaner}
@@ -383,7 +383,7 @@ func (h *CleanerHandler) GetCleanerProfile(c *gin.Context) {
 
 // @Summary Получить мои квартиры
 // @Description Получение списка квартир, назначенных уборщице
-// @Tags Cleaner
+// @Tags cleaner
 // @Accept json
 // @Produce json
 // @Success 200 {object} domain.SuccessResponse{data=[]domain.Apartment}
@@ -419,7 +419,7 @@ func (h *CleanerHandler) GetCleanerApartments(c *gin.Context) {
 
 // @Summary Получить квартиры для уборки
 // @Description Получение списка квартир, которые нуждаются в уборке
-// @Tags Cleaner
+// @Tags cleaner
 // @Accept json
 // @Produce json
 // @Success 200 {object} domain.SuccessResponse{data=[]domain.ApartmentForCleaning}
@@ -455,7 +455,7 @@ func (h *CleanerHandler) GetApartmentsForCleaning(c *gin.Context) {
 
 // @Summary Получить статистику уборщицы
 // @Description Получение статистики работы уборщицы
-// @Tags Cleaner
+// @Tags cleaner
 // @Accept json
 // @Produce json
 // @Success 200 {object} domain.SuccessResponse{data=map[string]interface{}}
@@ -491,7 +491,7 @@ func (h *CleanerHandler) GetCleanerStats(c *gin.Context) {
 
 // @Summary Начать уборку
 // @Description Отметить начало уборки квартиры
-// @Tags Cleaner
+// @Tags cleaner
 // @Accept json
 // @Produce json
 // @Param request body domain.StartCleaningRequest true "Данные для начала уборки"
@@ -538,7 +538,7 @@ func (h *CleanerHandler) StartCleaning(c *gin.Context) {
 
 // @Summary Завершить уборку
 // @Description Отметить завершение уборки квартиры и освободить её
-// @Tags Cleaner
+// @Tags cleaner
 // @Accept json
 // @Produce json
 // @Param request body domain.CompleteCleaningRequest true "Данные для завершения уборки"
@@ -585,7 +585,7 @@ func (h *CleanerHandler) CompleteCleaning(c *gin.Context) {
 
 // @Summary Полное обновление расписания
 // @Description Полностью заменяет расписание работы уборщицы. ВНИМАНИЕ: Все дни, которые не переданы в запросе, будут очищены! Для частичного обновления используйте PATCH /cleaner/schedule/patch
-// @Tags Cleaner
+// @Tags cleaner
 // @Accept json
 // @Produce json
 // @Param schedule body domain.CleanerSchedule true "Полное расписание на всю неделю"

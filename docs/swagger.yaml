@@ -1347,6 +1347,14 @@ definitions:
     required:
     - apartment_id
     type: object
+  http.AdminSetPasswordRequest:
+    properties:
+      password:
+        minLength: 6
+        type: string
+    required:
+    - password
+    type: object
   http.AdminUpdateBookingStatusRequest:
     properties:
       reason:
@@ -2012,13 +2020,19 @@ paths:
     delete:
       consumes:
       - application/json
-      description: Полное удаление квартиры из системы (только для админов)
+      description: Удаление квартиры из системы. Если есть активные бронирования и
+        force=false, возвращает 409 с информацией о бронированиях. С force=true отменяет
+        все бронирования и удаляет квартиру.
       parameters:
       - description: ID квартиры
         in: path
         name: id
         required: true
         type: integer
+      - description: Принудительное удаление с отменой всех бронирований
+        in: query
+        name: force
+        type: boolean
       produces:
       - application/json
       responses:
@@ -2040,6 +2054,10 @@ paths:
             $ref: '#/definitions/domain.ErrorResponse'
         "404":
           description: Not Found
+          schema:
+            $ref: '#/definitions/domain.ErrorResponse'
+        "409":
+          description: Есть активные бронирования
           schema:
             $ref: '#/definitions/domain.ErrorResponse'
         "500":
@@ -2832,6 +2850,53 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Обновить уборщицу
+      tags:
+      - Admin - Cleaners
+  /admin/cleaners/{id}/schedule:
+    patch:
+      consumes:
+      - application/json
+      description: Обновляет только переданные дни недели в расписании уборщицы (только
+        для админов)
+      parameters:
+      - description: ID уборщицы
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Данные расписания (только нужные дни). Используйте null для игнорирования
+          дня, [] для очистки дня
+        in: body
+        name: schedule
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CleanerSchedulePatch'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Частичное обновление расписания уборщицы (админ)
       tags:
       - Admin - Cleaners
   /admin/cleaners/apartments-needing-cleaning:
@@ -4173,6 +4238,55 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: История бронирований пользователя (админ)
+      tags:
+      - admin
+  /admin/users/{id}/password:
+    put:
+      consumes:
+      - application/json
+      description: Устанавливает новый пароль пользователю. Доступно только для админов.
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Новый пароль
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/http.AdminSetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/domain.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Установка пароля владельцу недвижимости (админ)
       tags:
       - admin
   /admin/users/{id}/role:
@@ -6975,7 +7089,7 @@ paths:
       - ApiKeyAuth: []
       summary: Получить мои квартиры
       tags:
-      - Cleaner
+      - cleaner
   /cleaner/apartments-for-cleaning:
     get:
       consumes:
@@ -7011,7 +7125,7 @@ paths:
       - ApiKeyAuth: []
       summary: Получить квартиры для уборки
       tags:
-      - Cleaner
+      - cleaner
   /cleaner/complete-cleaning:
     post:
       consumes:
@@ -7051,7 +7165,7 @@ paths:
       - ApiKeyAuth: []
       summary: Завершить уборку
       tags:
-      - Cleaner
+      - cleaner
   /cleaner/profile:
     get:
       consumes:
@@ -7085,7 +7199,7 @@ paths:
       - ApiKeyAuth: []
       summary: Получить профиль уборщицы
       tags:
-      - Cleaner
+      - cleaner
   /cleaner/schedule:
     put:
       consumes:
@@ -7127,7 +7241,7 @@ paths:
       - ApiKeyAuth: []
       summary: Полное обновление расписания
       tags:
-      - Cleaner
+      - cleaner
   /cleaner/schedule/patch:
     patch:
       consumes:
@@ -7210,7 +7324,7 @@ paths:
       - ApiKeyAuth: []
       summary: Начать уборку
       tags:
-      - Cleaner
+      - cleaner
   /cleaner/stats:
     get:
       consumes:
@@ -7245,7 +7359,7 @@ paths:
       - ApiKeyAuth: []
       summary: Получить статистику уборщицы
       tags:
-      - Cleaner
+      - cleaner
   /concierge/apartments:
     get:
       description: Получает список квартир, закрепленных за консьержем

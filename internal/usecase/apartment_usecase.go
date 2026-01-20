@@ -12,13 +12,14 @@ import (
 )
 
 type ApartmentUseCase struct {
-	apartmentRepo   domain.ApartmentRepository
-	userRepo        domain.UserRepository
-	ownerRepo       domain.PropertyOwnerRepository
-	bookingUseCase  domain.BookingUseCase
-	bookingRepo     domain.BookingRepository
-	contractUseCase domain.ContractUseCase
-	s3Storage       *s3.Storage
+	apartmentRepo       domain.ApartmentRepository
+	userRepo            domain.UserRepository
+	ownerRepo           domain.PropertyOwnerRepository
+	bookingUseCase      domain.BookingUseCase
+	bookingRepo         domain.BookingRepository
+	contractUseCase     domain.ContractUseCase
+	s3Storage           *s3.Storage
+	notificationUseCase domain.NotificationUseCase
 }
 
 func NewApartmentUseCase(
@@ -39,6 +40,10 @@ func NewApartmentUseCase(
 		contractUseCase: contractUseCase,
 		s3Storage:       s3Storage,
 	}
+}
+
+func (uc *ApartmentUseCase) SetNotificationUseCase(notificationUseCase domain.NotificationUseCase) {
+	uc.notificationUseCase = notificationUseCase
 }
 
 func (uc *ApartmentUseCase) Create(apartment *domain.Apartment) error {
@@ -77,6 +82,10 @@ func (uc *ApartmentUseCase) Create(apartment *domain.Apartment) error {
 			}
 			logger.Info("apartment contract created successfully", slog.Int("apartment_id", apartment.ID))
 		}
+	}
+
+	if uc.notificationUseCase != nil {
+		go uc.notificationUseCase.NotifyApartmentCreated(owner.UserID, apartment.ID, apartment.Description)
 	}
 
 	return nil
@@ -170,6 +179,7 @@ func (uc *ApartmentUseCase) Update(apartment *domain.Apartment) error {
 		return fmt.Errorf("должен быть выбран хотя бы один тип аренды (почасовая или посуточная)")
 	}
 
+	oldStatus := existingApartment.Status
 	apartment.Status = domain.AptStatusPending
 	if apartment.ModeratorComment == "" {
 		apartment.ModeratorComment = existingApartment.ModeratorComment
@@ -177,6 +187,13 @@ func (uc *ApartmentUseCase) Update(apartment *domain.Apartment) error {
 
 	if err := uc.apartmentRepo.Update(apartment); err != nil {
 		return fmt.Errorf("failed to update apartment: %w", err)
+	}
+
+	if uc.notificationUseCase != nil && oldStatus != domain.AptStatusPending {
+		owner, err := uc.ownerRepo.GetByID(apartment.OwnerID)
+		if err == nil && owner != nil {
+			go uc.notificationUseCase.NotifyApartmentUpdated(owner.UserID, apartment.ID, apartment.Description)
+		}
 	}
 
 	return nil
@@ -208,6 +225,105 @@ func (uc *ApartmentUseCase) Delete(id int) error {
 	}
 
 	return nil
+}
+
+func (uc *ApartmentUseCase) DeleteByAdmin(id int, force bool, adminID int) (hasActiveBookings bool, activeBookingsCount int, err error) {
+	logger.Info("ApartmentUseCase.DeleteByAdmin: начало удаления",
+		slog.Int("apartment_id", id),
+		slog.Bool("force", force),
+		slog.Int("admin_id", adminID))
+
+	existingApartment, err := uc.apartmentRepo.GetByID(id)
+	if err != nil {
+		logger.Error("ApartmentUseCase.DeleteByAdmin: ошибка получения квартиры",
+			slog.Int("apartment_id", id),
+			slog.String("error", err.Error()))
+		return false, 0, fmt.Errorf("failed to get apartment: %w", err)
+	}
+	if existingApartment == nil {
+		return false, 0, fmt.Errorf("apartment with id %d not found", id)
+	}
+
+	activeStatuses := []domain.BookingStatus{
+		domain.BookingStatusCreated,
+		domain.BookingStatusAwaitingPayment,
+		domain.BookingStatusPending,
+		domain.BookingStatusApproved,
+		domain.BookingStatusActive,
+	}
+
+	bookings, err := uc.bookingRepo.GetByApartmentID(id, activeStatuses)
+	if err != nil {
+		logger.Error("ApartmentUseCase.DeleteByAdmin: ошибка получения бронирований",
+			slog.Int("apartment_id", id),
+			slog.String("error", err.Error()))
+		return false, 0, fmt.Errorf("failed to get apartment bookings: %w", err)
+	}
+
+	activeBookingsCount = len(bookings)
+
+	logger.Info("ApartmentUseCase.DeleteByAdmin: найдено активных бронирований",
+		slog.Int("apartment_id", id),
+		slog.Int("active_bookings_count", activeBookingsCount))
+
+	if activeBookingsCount > 0 && !force {
+		logger.Info("ApartmentUseCase.DeleteByAdmin: удаление заблокировано из-за активных бронирований",
+			slog.Int("apartment_id", id),
+			slog.Int("active_bookings_count", activeBookingsCount))
+		return true, activeBookingsCount, nil
+	}
+
+	if activeBookingsCount > 0 && force {
+		logger.Info("ApartmentUseCase.DeleteByAdmin: принудительная отмена бронирований",
+			slog.Int("apartment_id", id),
+			slog.Int("bookings_to_cancel", activeBookingsCount))
+
+		for _, booking := range bookings {
+			err := uc.bookingUseCase.AdminCancelBooking(
+				booking.ID,
+				"Квартира удалена администратором",
+				adminID,
+			)
+			if err != nil {
+				logger.Error("ApartmentUseCase.DeleteByAdmin: ошибка отмены бронирования",
+					slog.Int("booking_id", booking.ID),
+					slog.String("error", err.Error()))
+				return false, activeBookingsCount, fmt.Errorf("failed to cancel booking %d: %w", booking.ID, err)
+			}
+			logger.Info("ApartmentUseCase.DeleteByAdmin: бронирование отменено",
+				slog.Int("booking_id", booking.ID))
+		}
+	}
+
+	photos, err := uc.apartmentRepo.GetPhotosByApartmentID(id)
+	if err != nil {
+		logger.Error("ApartmentUseCase.DeleteByAdmin: ошибка получения фотографий",
+			slog.Int("apartment_id", id),
+			slog.String("error", err.Error()))
+		return false, 0, fmt.Errorf("failed to get apartment photos: %w", err)
+	}
+
+	if err := uc.apartmentRepo.Delete(id); err != nil {
+		logger.Error("ApartmentUseCase.DeleteByAdmin: ошибка удаления из БД",
+			slog.Int("apartment_id", id),
+			slog.String("error", err.Error()))
+		return false, 0, fmt.Errorf("failed to delete apartment: %w", err)
+	}
+
+	for _, photo := range photos {
+		objectKey := uc.s3Storage.ExtractObjectKey(photo.URL)
+		if err := uc.s3Storage.DeleteFile(objectKey); err != nil {
+			logger.Warn("ApartmentUseCase.DeleteByAdmin: ошибка удаления фото из S3",
+				slog.Int("photo_id", photo.ID),
+				slog.String("error", err.Error()))
+		}
+	}
+
+	logger.Info("ApartmentUseCase.DeleteByAdmin: квартира успешно удалена",
+		slog.Int("apartment_id", id),
+		slog.Int("cancelled_bookings", activeBookingsCount))
+
+	return false, 0, nil
 }
 
 func (uc *ApartmentUseCase) AddPhotos(apartmentID int, filesData [][]byte) ([]string, error) {
@@ -506,6 +622,7 @@ func (uc *ApartmentUseCase) UpdateStatus(apartmentID int, status domain.Apartmen
 		return fmt.Errorf("apartment with id %d not found", apartmentID)
 	}
 
+	oldStatus := apartment.Status
 	apartment.Status = status
 	if comment != "" {
 		apartment.ModeratorComment = comment
@@ -513,6 +630,20 @@ func (uc *ApartmentUseCase) UpdateStatus(apartmentID int, status domain.Apartmen
 
 	if err := uc.apartmentRepo.Update(apartment); err != nil {
 		return fmt.Errorf("failed to update apartment status: %w", err)
+	}
+
+	if uc.notificationUseCase != nil && oldStatus != status {
+		owner, err := uc.ownerRepo.GetByID(apartment.OwnerID)
+		if err == nil && owner != nil {
+			switch status {
+			case domain.AptStatusApproved:
+				go uc.notificationUseCase.NotifyApartmentApproved(owner.UserID, apartment.ID, apartment.Description)
+			case domain.AptStatusRejected:
+				go uc.notificationUseCase.NotifyApartmentRejected(owner.UserID, apartment.ID, apartment.Description, comment)
+			default:
+				go uc.notificationUseCase.NotifyApartmentStatusChanged(owner.UserID, apartment.ID, apartment.Description, string(oldStatus), string(status))
+			}
+		}
 	}
 
 	return nil

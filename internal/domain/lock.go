@@ -233,6 +233,8 @@ type LockUseCase interface {
 	AdminGeneratePassword(uniqueID string, request *AdminGeneratePasswordRequest) (*LockTempPassword, error)
 	AdminGetAllLockPasswords(uniqueID string) ([]*LockTempPassword, error)
 	AdminDeactivatePassword(passwordID int) error
+
+	SetNotificationUseCase(notificationUseCase NotificationUseCase)
 }
 
 type TuyaLockService interface {

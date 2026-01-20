@@ -18,14 +18,15 @@ type LockAutoUpdateService interface {
 }
 
 type lockUseCase struct {
-	lockRepo          domain.LockRepository
-	apartmentRepo     domain.ApartmentRepository
-	bookingRepo       domain.BookingRepository
-	propertyOwnerRepo domain.PropertyOwnerRepository
-	renterRepo        domain.RenterRepository
-	userUseCase       domain.UserUseCase
-	tuyaService       domain.TuyaLockService
-	autoUpdateService LockAutoUpdateService
+	lockRepo            domain.LockRepository
+	apartmentRepo       domain.ApartmentRepository
+	bookingRepo         domain.BookingRepository
+	propertyOwnerRepo   domain.PropertyOwnerRepository
+	renterRepo          domain.RenterRepository
+	userUseCase         domain.UserUseCase
+	tuyaService         domain.TuyaLockService
+	autoUpdateService   LockAutoUpdateService
+	notificationUseCase domain.NotificationUseCase
 }
 
 func NewLockUseCase(
@@ -50,6 +51,10 @@ func NewLockUseCase(
 	}
 
 	return useCase
+}
+
+func (u *lockUseCase) SetNotificationUseCase(notificationUseCase domain.NotificationUseCase) {
+	u.notificationUseCase = notificationUseCase
 }
 
 func (u *lockUseCase) generateNumericPassword() (string, error) {
@@ -318,6 +323,15 @@ func (u *lockUseCase) GeneratePasswordForBooking(uniqueID string, userID int, bo
 		Notes:        fmt.Sprintf("Создан временный пароль для бронирования: %s", password),
 	}
 	u.lockRepo.CreateStatusLog(statusLog)
+
+	if u.notificationUseCase != nil {
+		apartment, _ := u.apartmentRepo.GetByID(booking.ApartmentID)
+		apartmentTitle := "квартира"
+		if apartment != nil {
+			apartmentTitle = apartment.Description
+		}
+		go u.notificationUseCase.NotifyPasswordReady(userID, bookingID, apartmentTitle)
+	}
 
 	return tuyaPassword, nil
 }

@@ -51,9 +51,10 @@ const OwnerDashboardPage = () => {
     queryKey: ['owner-bookings', selectedApartment, dateRange],
     queryFn: () => bookingsAPI.getOwnerBookings({
       apartment_id: selectedApartment === 'all' ? undefined : selectedApartment,
-      start_date: dateRange[0].format('YYYY-MM-DD'),
-      end_date: dateRange[1].format('YYYY-MM-DD'),
+      date_from: dateRange?.[0]?.format('YYYY-MM-DD'),
+      date_to: dateRange?.[1]?.format('YYYY-MM-DD'),
     }),
+    enabled: !!dateRange && dateRange.length === 2,
   });
 
   // Расчет статистики на основе реальных данных
@@ -68,11 +69,13 @@ const OwnerDashboardPage = () => {
     
     const bookingsByWeek = {};
     bookings.forEach(booking => {
-      const weekStart = dayjs(booking.check_in).startOf('week').format('DD.MM');
+      if (!booking.check_in && !booking.start_date) return;
+      const checkInDate = booking.check_in || booking.start_date;
+      const weekStart = dayjs(checkInDate).startOf('week').format('DD.MM');
       if (!bookingsByWeek[weekStart]) {
         bookingsByWeek[weekStart] = { revenue: 0, bookings: 0 };
       }
-      bookingsByWeek[weekStart].revenue += booking.total_amount || 0;
+      bookingsByWeek[weekStart].revenue += booking.total_amount || booking.final_price || 0;
       bookingsByWeek[weekStart].bookings += 1;
     });
     
